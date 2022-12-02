@@ -171,3 +171,21 @@ void Position::printBitboard(PieceColor color){
     }
     std::cout << std::endl;
 }
+
+// DOES NOT HANDLE MOVE VALIDITY
+void Position::makeMove(Move move) {
+    PieceType piecetype = getPiceceAtSquare(move & 0x3F); 
+    if ((move & 0xF000) == 0){ // Normal move (only moves one pieces from a square to another)
+        pieceBitboards[piecetype] ^= (1ULL << (move & 0x3F));
+        pieceBitboards[piecetype] |= (1ULL << ((move >> 6) & 0x3F));
+    }
+}
+
+PieceType Position::getPiceceAtSquare(int square) {
+    for (PieceType i = wPAWN; i < NO_PIECE; i++) {
+        if (pieceBitboards[i] & (1ULL << square)) {
+            return i;
+        }
+    }
+    return NO_PIECE;
+}

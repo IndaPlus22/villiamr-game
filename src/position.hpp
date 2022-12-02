@@ -10,7 +10,7 @@ class Position {
     public:
         Position(std::string fen);
         //~Position();
-        
+
         // GETTERS AND SETTERS
         Bitboard getBitboard(PieceType piecetype) {return pieceBitboards[piecetype];};
 
@@ -20,6 +20,11 @@ class Position {
         void printBitboard();
         uint8_t getCastelingRights() {return castlingRights;};
         PieceColor getSideToMove() {return sideToMove;};
+
+
+        // MOVE FUNCTIONS
+        std::vector<Move> getLegalMoves();
+        void makeMove(Move move);
 
 
 
@@ -35,6 +40,8 @@ class Position {
         std::vector<Move> moveLog;
 
         void initPosition(std::string fen);
+
+        PieceType getPiceceAtSquare(int square);
         
 };
 
