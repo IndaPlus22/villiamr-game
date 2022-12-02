@@ -43,7 +43,7 @@ GraphicsBase::~GraphicsBase() {
     }
 }
 
-void GraphicsBase::drawBase() {
+void GraphicsBase::drawBase() { // TODO: THIS FUNCTION SHOULD TAKE A POSITION OBJECT AS ARGUMENT AND DRAW THE BOARD ACCORDING TO THE POSITION
     SDL_RenderCopy(this->renderer, this->bg, NULL, &this->bg_rect);
     SDL_RenderCopy(this->renderer, this->PieceTextures[wPAWN], NULL, &this->piece_rect);
 }

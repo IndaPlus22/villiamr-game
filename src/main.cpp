@@ -24,6 +24,7 @@ int main(){
 
     SDL_RenderPresent(renderer);
 
+    SDL_Delay(2000);
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
