@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <iostream>
 #include "types.hpp"
+#include "position.hpp"
 
 
 
@@ -14,7 +15,7 @@ public:
     GraphicsBase(SDL_Renderer* renderer, int width, int height);
     ~GraphicsBase();
 
-    void drawBase();
+    void drawPosition(Position position);
 
 private:
     SDL_Renderer* renderer;

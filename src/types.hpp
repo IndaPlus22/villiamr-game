@@ -23,6 +23,10 @@ typedef enum PieceColor {
     WHITE, BLACK
 } PieceColor;
 
+typedef enum CastelingRights {
+    WHITE_KINGSIDE, WHITE_QUEENSIDE, BLACK_KINGSIDE, BLACK_QUEENSIDE
+} CastelingRights;
+
 
 
 #endif

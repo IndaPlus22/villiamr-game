@@ -43,7 +43,16 @@ GraphicsBase::~GraphicsBase() {
     }
 }
 
-void GraphicsBase::drawBase() { // TODO: THIS FUNCTION SHOULD TAKE A POSITION OBJECT AS ARGUMENT AND DRAW THE BOARD ACCORDING TO THE POSITION
+void GraphicsBase::drawPosition(Position position) { // TODO: THIS FUNCTION SHOULD TAKE A POSITION OBJECT AS ARGUMENT AND DRAW THE BOARD ACCORDING TO THE POSITION
     SDL_RenderCopy(this->renderer, this->bg, NULL, &this->bg_rect);
-    SDL_RenderCopy(this->renderer, this->PieceTextures[wPAWN], NULL, &this->piece_rect);
+    for (PieceType i = wPAWN; i < NO_PIECE; i++) {
+        for (int j = 0; j < 64; j++) {
+            if (position.getBitboard(i) & (1ULL << j)) {
+                this->piece_rect.x = (j % 8) * this->squareSize;
+                this->piece_rect.y = (j / 8) * this->squareSize;
+                SDL_RenderCopy(this->renderer, this->PieceTextures[i], NULL, &this->piece_rect);
+            }
+                  
+        }
+    }
 }
