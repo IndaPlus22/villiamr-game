@@ -147,7 +147,6 @@ void Position::printBitboard(PieceType board){
     std::cout << std::endl;
 }
 
-
 void Position::printBitboard (){
     for (int i = 0; i < 64; i++){
         if (i % 8 == 0)
@@ -174,10 +173,72 @@ void Position::printBitboard(PieceColor color){
 
 // DOES NOT HANDLE MOVE VALIDITY
 void Position::makeMove(Move move) { // TODO: FINSISH MAKEMOVE FUNCTIONl
-    PieceType piecetype = getPiceceAtSquare(move & 0x3F); 
+    moveLog.push_back(move);
+    PieceType piece = getPiceceAtSquare(move & 0x3F); 
+    PieceType capturedPiece = getPiceceAtSquare((move >> 6) & 0x3F);
     if ((move & 0xF000) == 0){ // Normal move (only moves one pieces from a square to another)
-        pieceBitboards[piecetype] ^= (1ULL << (move & 0x3F));
-        pieceBitboards[piecetype] |= (1ULL << ((move >> 6) & 0x3F));
+        pieceBitboards[piece] ^= (1ULL << (move & 0x3F));
+        pieceBitboards[piece] |= (1ULL << ((move >> 6) & 0x3F));
+    }
+    else if ((move & 0xF000) == 0x1000){ // Normal capture ( moves one piece and captures another)
+        pieceBitboards[piece] ^= (1ULL << (move & 0x3F));
+        pieceBitboards[capturedPiece] ^= (1ULL << ((move >> 6) & 0x3F));
+        pieceBitboards[piece] |= (1ULL << ((move >> 6) & 0x3F));
+    }
+    else if ((move & 0xF000) == 0x2000){ // Casteling ( moves the king and the rook )
+        if (piece == wKING){
+            castlingRights &= ~0x03;
+            pieceBitboards[wKING] ^= (1ULL << (move & 0x3F));
+            pieceBitboards[wKING] |= (1ULL << ((move >> 6) & 0x3F));
+            if(((move >> 6) & 0x3F) == 62){ 
+                pieceBitboards[wROOK] ^= (1ULL << 63);  
+                pieceBitboards[wROOK] |= (1ULL << 61);
+            }  
+            else { 
+                pieceBitboards[wROOK] ^= (1ULL << 56);  
+                pieceBitboards[wROOK] |= (1ULL << 59);
+            }
+        }
+        else{
+            castlingRights &= ~0x0C;
+            pieceBitboards[bKING] ^= (1ULL << (move & 0x3F));
+            pieceBitboards[bKING] |= (1ULL << ((move >> 6) & 0x3F));
+            if(((move >> 6) & 0x3F) == 6){ 
+                pieceBitboards[bROOK] ^= (1ULL << 7);  
+                pieceBitboards[bROOK] |= (1ULL << 5);
+            }  
+            else { 
+                pieceBitboards[bROOK] ^= (1ULL << 0);  
+                pieceBitboards[bROOK] |= (1ULL << 3);
+            }
+        }
+    }
+    else if ((move & 0xF000) == 0x3000){ // En passant ( moves a pawn and captures a pawn )
+        pieceBitboards[piece] ^= (1ULL << (move & 0x3F));
+        pieceBitboards[piece] |= (1ULL << ((move >> 6) & 0x3F));
+        if (piece == wPAWN){
+            pieceBitboards[bPAWN] ^= (1ULL << ((move >> 6) & 0x3F) + 8);
+        }
+        else{
+            pieceBitboards[wPAWN] ^= (1ULL << ((move >> 6) & 0x3F) - 8);
+        }
+    }
+    else if ((move & 0xF000) == 0x4000){ // Promotion ( moves a pawn and promotes it to a piece )
+        pieceBitboards[piece] ^= (1ULL << (move & 0x3F));
+        if (piece == wPAWN){
+            pieceBitboards[wQUEEN] |= (1ULL << ((move >> 6) & 0x3F));
+        }
+        else{
+            pieceBitboards[bQUEEN] |= (1ULL << ((move >> 6) & 0x3F));
+        }
+    }
+    else if ((move & 0xF000) == 0x5000){ // Promotion capture ( moves a pawn, promotes it to a piece, and captures another piece )
+        pieceBitboards[piece] ^= (1ULL << (move & 0x3F));
+        pieceBitboards[capturedPiece] ^= (1ULL << ((move >> 6) & 0x3F));
+        if (piece == wPAWN)
+            pieceBitboards[wQUEEN] |= (1ULL << ((move >> 6) & 0x3F));
+        else 
+            pieceBitboards[bQUEEN] |= (1ULL << ((move >> 6) & 0x3F));
     }
 }
 

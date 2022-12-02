@@ -19,15 +19,12 @@ int main(){
     GraphicsBase graphicsBase(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
     Position position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
+    SDL_Delay(3000);
     SDL_RenderClear(renderer);
-
-    position.makeMove(0b0000'011011'000000);
-  
-    graphicsBase.drawPosition(position);  
-
+    position.makeMove(0b0100'111000'001000);
+    graphicsBase.drawPosition(position);
     SDL_RenderPresent(renderer);
-
-    SDL_Delay(2000);
+    SDL_Delay(4000);
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
