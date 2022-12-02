@@ -173,7 +173,7 @@ void Position::printBitboard(PieceColor color){
 }
 
 // DOES NOT HANDLE MOVE VALIDITY
-void Position::makeMove(Move move) {
+void Position::makeMove(Move move) { // TODO: FINSISH MAKEMOVE FUNCTIONl
     PieceType piecetype = getPiceceAtSquare(move & 0x3F); 
     if ((move & 0xF000) == 0){ // Normal move (only moves one pieces from a square to another)
         pieceBitboards[piecetype] ^= (1ULL << (move & 0x3F));
