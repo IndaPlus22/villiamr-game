@@ -160,6 +160,16 @@ void Position::printBitboard (){
     std::cout << std::endl;
 }
 
+void Position::printBitboard(Bitboard board){
+    for (int i = 0; i < 8; i++){
+        for (int j = 0; j < 8; j++){
+            std::cout << ((board >> (i*8 + j)) & 1);
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+}
+
 void Position::printBitboard(PieceColor color){
     for (int i = 0; i < 64; i++){
         if (i % 8 == 0)
@@ -178,6 +188,37 @@ void Position::makeMove(Cmove move) { // TODO: UPDATE CASTLING RIGHTS FOR ROOK M
     PieceType captured = type == CAPTURE || type == PROMOTION_CAPTURE ? getPiceceAtSquare(move.getTo()) : NO_PIECE;
     PieceType piece = getPiceceAtSquare(move.getFrom());
     move.setCapturedPiece(captured);
+
+     // Update castling rights
+    if (piece == wROOK && castlingRights & (0x01 << WHITE_QUEENSIDE) && move.getFrom() == 56) {     
+        castlingRights &= ~(0x01 << WHITE_QUEENSIDE); 
+        move.setRemovedCastelingRights(WHITE_QUEENSIDE);
+    }
+    else if (piece == wROOK && castlingRights & (0x01 << WHITE_KINGSIDE) && move.getFrom() == 63){
+        castlingRights &= ~(0x01 << WHITE_KINGSIDE);
+        move.setRemovedCastelingRights(WHITE_KINGSIDE);
+    }
+    else if (piece == bROOK && castlingRights & (0x01 << BLACK_QUEENSIDE) && move.getFrom() == 0){
+        castlingRights &= ~(0x01 << BLACK_QUEENSIDE);
+        move.setRemovedCastelingRights(BLACK_QUEENSIDE);
+    }
+    else if (piece == bROOK && castlingRights & (0x01 << BLACK_KINGSIDE) && move.getFrom() == 7){
+        castlingRights &= ~(0x01 << BLACK_KINGSIDE);
+        move.setRemovedCastelingRights(BLACK_KINGSIDE);
+    }
+
+    // En_Passant square handeling
+    if (piece == wPAWN || piece == bPAWN){
+        if (piece == wPAWN && RANK_7 & (1ULL << move.getFrom()) != 0 && RANK_5 & (1ULL << move.getTo()) != 0){
+            enPassantSquare = move.getTo() + 8;
+        }
+        else if (piece == bPAWN && RANK_2 & (1ULL << move.getFrom()) != 0 && RANK_4 & (1ULL << move.getTo()) != 0){
+            enPassantSquare = move.getTo() - 8;
+        }
+    }else{
+        enPassantSquare = -1;
+    }
+   
 
     switch (type) {
     case NORMAL:
@@ -202,8 +243,10 @@ void Position::makeMove(Cmove move) { // TODO: UPDATE CASTLING RIGHTS FOR ROOK M
                 pieceBitboards[bROOK] |= (1ULL << 3);
                 pieceBitboards[bROOK] ^= (1ULL << 0);
             }
-            removeCastleRights(BLACK_KINGSIDE);
-            removeCastleRights(BLACK_QUEENSIDE);
+            castlingRights &= ~(0x01 << BLACK_QUEENSIDE);
+            castlingRights &= ~(0x01 << BLACK_KINGSIDE);
+            move.setRemovedCastelingRights(BLACK_QUEENSIDE);    // All in the name of inversability
+            move.setRemovedCastelingRights(BLACK_KINGSIDE);
         } else {
             if (move.getTo() == 62){
                 pieceBitboards[wKING] |= (1ULL << move.getTo());
@@ -216,8 +259,10 @@ void Position::makeMove(Cmove move) { // TODO: UPDATE CASTLING RIGHTS FOR ROOK M
                 pieceBitboards[wROOK] |= (1ULL << 59);
                 pieceBitboards[wROOK] ^= (1ULL << 56);
             }
-            removeCastleRights(WHITE_KINGSIDE);
-            removeCastleRights(WHITE_QUEENSIDE);
+            castlingRights &= ~(0x01 << WHITE_QUEENSIDE);
+            castlingRights &= ~(0x01 << WHITE_KINGSIDE);
+            move.setRemovedCastelingRights(WHITE_QUEENSIDE);
+            move.setRemovedCastelingRights(WHITE_KINGSIDE);
         }
         break;
     case EN_PASSANT:
@@ -246,6 +291,15 @@ void Position::makeMove(Cmove move) { // TODO: UPDATE CASTLING RIGHTS FOR ROOK M
     Move fromSQ = move.getFrom();
     moveLog.pop_back();
     sideToMove++; // SWITches back move turn
+
+    // Gives back castling rights
+    if (move.getRemovedCastelingRights() != 0){             
+        castlingRights |= move.getRemovedCastelingRights();
+    }
+
+    // En_Passant square handeling TODO: FIX
+
+
 
     switch (move.getType()) {
     case NORMAL: // When no pieces are removed we reverse make move function
@@ -310,3 +364,4 @@ PieceType Position::getPiceceAtSquare(int square) {
     }
     return NO_PIECE;
 }
+

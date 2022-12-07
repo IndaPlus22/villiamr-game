@@ -14,18 +14,23 @@ class Position {
 
         // GETTERS AND SETTERS
         Bitboard getBitboard(PieceType piecetype) {return pieceBitboards[piecetype];};
-        void removeCastleRights(CastelingRights rights) {castlingRights ^= (0x01 << rights);};
+        std::vector<Cmove> getLegalMoves() {return legalMoves;};
+        PieceColor getSideToMove() {return sideToMove;};
+        Bitboard getAllBitboard() {return allBitboard;};
+        Bitboard getColorBitboard(PieceColor color) {return colorBitboards[color];};
+        Bitboard getPieceBitboard(PieceType piecetype) {return pieceBitboards[piecetype];};
+        int getEnPassantSquare() {return enPassantSquare;};
+        uint8_t getCastelingRights() {return castlingRights;};
 
         // TESTING FUNCTIONS
         void printBitboard(PieceType board); 
         void printBitboard(PieceColor color);
+        void printBitboard(Bitboard board);
         void printBitboard();
-        uint8_t getCastelingRights() {return castlingRights;};
-        PieceColor getSideToMove() {return sideToMove;};
 
 
         // MOVE FUNCTIONS
-        std::vector<Cmove> getLegalMoves();
+        void generateLegalMoves();
         void makeMove(Cmove move);
         void unmakeMove();
 
@@ -40,7 +45,10 @@ class Position {
         uint8_t castlingRights;
         int enPassantSquare;
 
+        std::vector<Cmove> legalMoves;
         std::vector<Cmove> moveLog;
+
+        std::vector<Cmove> pawnMoves();
 
         void initPosition(std::string fen);
 
