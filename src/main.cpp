@@ -21,10 +21,16 @@ int main(){
 
     SDL_Delay(3000);
     SDL_RenderClear(renderer);
-    position.makeMove(0b0100'111000'001000);
+    position.makeMove(Cmove(60,34, NORMAL));
     graphicsBase.drawPosition(position);
     SDL_RenderPresent(renderer);
-    SDL_Delay(4000);
+    SDL_Delay(2000);
+    SDL_RenderClear(renderer);
+    position.unmakeMove();
+    graphicsBase.drawPosition(position);
+    SDL_RenderPresent(renderer);
+    SDL_Delay(2000);
+
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <bit>
 #include "types.hpp"
 
 class Position {
@@ -23,8 +24,9 @@ class Position {
 
 
         // MOVE FUNCTIONS
-        std::vector<Move> getLegalMoves();
-        void makeMove(Move move);
+        std::vector<Cmove> getLegalMoves();
+        void makeMove(Cmove move);
+        void unmakeMove();
 
 
 
@@ -37,7 +39,7 @@ class Position {
         uint8_t castlingRights;
         int enPassantSquare;
 
-        std::vector<Move> moveLog;
+        std::vector<Cmove> moveLog;
 
         void initPosition(std::string fen);
 

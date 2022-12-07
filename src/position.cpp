@@ -135,6 +135,7 @@ void Position::initPosition(std::string fen) {
 
 }
 
+
 void Position::printBitboard(PieceType board){
     for (int i = 0; i < 64; i++){
         if (i % 8 == 0)
@@ -172,75 +173,130 @@ void Position::printBitboard(PieceColor color){
 }
 
 // DOES NOT HANDLE MOVE VALIDITY
-void Position::makeMove(Move move) { // TODO: FINSISH MAKEMOVE FUNCTIONl
-    moveLog.push_back(move);
-    PieceType piece = getPiceceAtSquare(move & 0x3F); 
-    PieceType capturedPiece = getPiceceAtSquare((move >> 6) & 0x3F);
-    if ((move & 0xF000) == 0){ // Normal move (only moves one pieces from a square to another)
-        pieceBitboards[piece] ^= (1ULL << (move & 0x3F));
-        pieceBitboards[piece] |= (1ULL << ((move >> 6) & 0x3F));
-    }
-    else if ((move & 0xF000) == 0x1000){ // Normal capture ( moves one piece and captures another)
-        pieceBitboards[piece] ^= (1ULL << (move & 0x3F));
-        pieceBitboards[capturedPiece] ^= (1ULL << ((move >> 6) & 0x3F));
-        pieceBitboards[piece] |= (1ULL << ((move >> 6) & 0x3F));
-    }
-    else if ((move & 0xF000) == 0x2000){ // Casteling ( moves the king and the rook )
-        if (piece == wKING){
-            castlingRights &= ~0x03;
-            pieceBitboards[wKING] ^= (1ULL << (move & 0x3F));
-            pieceBitboards[wKING] |= (1ULL << ((move >> 6) & 0x3F));
-            if(((move >> 6) & 0x3F) == 62){ 
-                pieceBitboards[wROOK] ^= (1ULL << 63);  
-                pieceBitboards[wROOK] |= (1ULL << 61);
-            }  
-            else { 
-                pieceBitboards[wROOK] ^= (1ULL << 56);  
-                pieceBitboards[wROOK] |= (1ULL << 59);
-            }
-        }
-        else{
-            castlingRights &= ~0x0C;
-            pieceBitboards[bKING] ^= (1ULL << (move & 0x3F));
-            pieceBitboards[bKING] |= (1ULL << ((move >> 6) & 0x3F));
-            if(((move >> 6) & 0x3F) == 6){ 
-                pieceBitboards[bROOK] ^= (1ULL << 7);  
+void Position::makeMove(Cmove move) { // TODO: FINSISH MAKEMOVE FUNCTION
+    MoveType type = move.getType();
+    PieceType captured = type == CAPTURE || type == PROMOTION_CAPTURE ? getPiceceAtSquare(move.getTo()) : NO_PIECE;
+    PieceType piece = getPiceceAtSquare(move.getFrom());
+    move.setCapturedPiece(captured);
+
+    switch (type) {
+    case NORMAL:
+        pieceBitboards[piece] ^= (1ULL << move.getFrom());
+        pieceBitboards[piece] |= (1ULL << move.getTo());
+        break;
+    case CAPTURE:
+        pieceBitboards[piece] ^= (1ULL << move.getFrom());
+        pieceBitboards[piece] |= (1ULL << move.getTo());
+        pieceBitboards[captured] ^= (1ULL << move.getTo());
+        break;
+    case CASTELING:
+        if (sideToMove == BLACK){
+            if (move.getTo() == 6){
+                pieceBitboards[bKING] |= (1ULL << move.getTo());
+                pieceBitboards[bKING] ^= (1ULL << move.getFrom());
                 pieceBitboards[bROOK] |= (1ULL << 5);
-            }  
-            else { 
-                pieceBitboards[bROOK] ^= (1ULL << 0);  
+                pieceBitboards[bROOK] ^= (1ULL << 7);
+            } else {
+                pieceBitboards[bKING] |= (1ULL << move.getTo());
+                pieceBitboards[bKING] ^= (1ULL << move.getFrom());
                 pieceBitboards[bROOK] |= (1ULL << 3);
+                pieceBitboards[bROOK] ^= (1ULL << 0);
+            }
+        } else {
+            if (move.getTo() == 62){
+                pieceBitboards[wKING] |= (1ULL << move.getTo());
+                pieceBitboards[wKING] ^= (1ULL << move.getFrom());
+                pieceBitboards[wROOK] |= (1ULL << 61);
+                pieceBitboards[wROOK] ^= (1ULL << 63);
+            } else {
+                pieceBitboards[wKING] |= (1ULL << move.getTo());
+                pieceBitboards[wKING] ^= (1ULL << move.getFrom());
+                pieceBitboards[wROOK] |= (1ULL << 59);
+                pieceBitboards[wROOK] ^= (1ULL << 56);
             }
         }
+        break;
+    case EN_PASSANT:
+        pieceBitboards[piece] ^= (1ULL << move.getFrom());
+        pieceBitboards[piece] |= (1ULL << move.getTo());
+        pieceBitboards[sideToMove == WHITE ? bPAWN : wPAWN] ^= (1ULL << (sideToMove == WHITE ? move.getTo() + 8 : move.getTo() - 8));
+        break;
+    case PROMOTION:
+        pieceBitboards[piece] ^= (1ULL << move.getFrom());
+        pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN] |= (1ULL << move.getTo());
+        break;
+    case PROMOTION_CAPTURE:
+        pieceBitboards[piece] ^= (1ULL << move.getFrom());
+        pieceBitboards[captured] ^= (1ULL << move.getTo());
+        pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN] |= (1ULL << move.getTo());
+        break;
     }
-    else if ((move & 0xF000) == 0x3000){ // En passant ( moves a pawn and captures a pawn )
-        pieceBitboards[piece] ^= (1ULL << (move & 0x3F));
-        pieceBitboards[piece] |= (1ULL << ((move >> 6) & 0x3F));
-        if (piece == wPAWN){
-            pieceBitboards[bPAWN] ^= (1ULL << ((move >> 6) & 0x3F) + 8);
-        }
-        else{
-            pieceBitboards[wPAWN] ^= (1ULL << ((move >> 6) & 0x3F) - 8);
-        }
-    }
-    else if ((move & 0xF000) == 0x4000){ // Promotion ( moves a pawn and promotes it to a piece )
-        pieceBitboards[piece] ^= (1ULL << (move & 0x3F));
-        if (piece == wPAWN){
-            pieceBitboards[wQUEEN] |= (1ULL << ((move >> 6) & 0x3F));
-        }
-        else{
-            pieceBitboards[bQUEEN] |= (1ULL << ((move >> 6) & 0x3F));
-        }
-    }
-    else if ((move & 0xF000) == 0x5000){ // Promotion capture ( moves a pawn, promotes it to a piece, and captures another piece )
-        pieceBitboards[piece] ^= (1ULL << (move & 0x3F));
-        pieceBitboards[capturedPiece] ^= (1ULL << ((move >> 6) & 0x3F));
-        if (piece == wPAWN)
-            pieceBitboards[wQUEEN] |= (1ULL << ((move >> 6) & 0x3F));
-        else 
-            pieceBitboards[bQUEEN] |= (1ULL << ((move >> 6) & 0x3F));
-    }
+    sideToMove++;
+    moveLog.push_back(move);
 }
+
+ void Position::unmakeMove(){
+    Cmove move = moveLog.back();
+    PieceType piece = getPiceceAtSquare(move.getTo());
+    PieceType captured = move.getCapturedPiece();
+    Move fromSQ = move.getFrom();
+    moveLog.pop_back();
+    sideToMove++; // SWITches back move turn
+
+    switch (move.getType()) {
+    case NORMAL: // When no pieces are removed we reverse make move function
+        move.setFrom(move.getTo());
+        move.setTo(fromSQ);
+        makeMove(move);
+        break;
+    case CASTELING:
+        if (sideToMove == BLACK){
+            if (move.getTo() == 6){
+                pieceBitboards[bKING] ^= (1ULL << move.getTo());
+                pieceBitboards[bKING] |= (1ULL << move.getFrom());
+                pieceBitboards[bROOK] ^= (1ULL << 5);
+                pieceBitboards[bROOK] |= (1ULL << 7);
+            } else {
+                pieceBitboards[bKING] ^= (1ULL << move.getTo());
+                pieceBitboards[bKING] |= (1ULL << move.getFrom());
+                pieceBitboards[bROOK] ^= (1ULL << 3);
+                pieceBitboards[bROOK] |= (1ULL << 0);
+            }
+        } else {
+            if (move.getTo() == 62){
+                pieceBitboards[wKING] ^= (1ULL << move.getTo());
+                pieceBitboards[wKING] |= (1ULL << move.getFrom());
+                pieceBitboards[wROOK] ^= (1ULL << 61);
+                pieceBitboards[wROOK] |= (1ULL << 63);
+            } else {
+                pieceBitboards[wKING] ^= (1ULL << move.getTo());
+                pieceBitboards[wKING] |= (1ULL << move.getFrom());
+                pieceBitboards[wROOK] ^= (1ULL << 59);
+                pieceBitboards[wROOK] |= (1ULL << 56);
+            }
+        }
+        break;
+    case CAPTURE:
+        pieceBitboards[piece] ^= (1ULL << move.getTo());
+        pieceBitboards[piece] |= (1ULL << move.getFrom());
+        pieceBitboards[captured] |= (1ULL << move.getTo());
+        break;
+    case EN_PASSANT:
+        pieceBitboards[piece] ^= (1ULL << move.getTo());
+        pieceBitboards[piece] |= (1ULL << move.getFrom());
+        pieceBitboards[sideToMove == WHITE ? bPAWN : wPAWN] |= (1ULL << (sideToMove == WHITE ? move.getTo() + 8 : move.getTo() - 8));
+        break;
+    case PROMOTION:
+        pieceBitboards[sideToMove == WHITE ? wPAWN : bPAWN] |= (1ULL << move.getFrom());
+        pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN] ^= (1ULL << move.getTo());
+        break;
+    case PROMOTION_CAPTURE:
+        pieceBitboards[sideToMove == WHITE ? wPAWN : bPAWN] |= (1ULL << move.getFrom());
+        pieceBitboards[captured] |= (1ULL << move.getTo());
+        pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN] ^= (1ULL << move.getTo());
+        break;
+    }
+ }
 
 PieceType Position::getPiceceAtSquare(int square) {
     for (PieceType i = wPAWN; i < NO_PIECE; i++) {
