@@ -14,6 +14,7 @@ class Position {
 
         // GETTERS AND SETTERS
         Bitboard getBitboard(PieceType piecetype) {return pieceBitboards[piecetype];};
+        void removeCastleRights(CastelingRights rights) {castlingRights ^= (0x01 << rights);};
 
         // TESTING FUNCTIONS
         void printBitboard(PieceType board); 

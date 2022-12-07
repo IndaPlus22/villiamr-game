@@ -173,7 +173,7 @@ void Position::printBitboard(PieceColor color){
 }
 
 // DOES NOT HANDLE MOVE VALIDITY
-void Position::makeMove(Cmove move) { // TODO: FINSISH MAKEMOVE FUNCTION
+void Position::makeMove(Cmove move) { // TODO: UPDATE CASTLING RIGHTS FOR ROOK MOVES
     MoveType type = move.getType();
     PieceType captured = type == CAPTURE || type == PROMOTION_CAPTURE ? getPiceceAtSquare(move.getTo()) : NO_PIECE;
     PieceType piece = getPiceceAtSquare(move.getFrom());
@@ -202,6 +202,8 @@ void Position::makeMove(Cmove move) { // TODO: FINSISH MAKEMOVE FUNCTION
                 pieceBitboards[bROOK] |= (1ULL << 3);
                 pieceBitboards[bROOK] ^= (1ULL << 0);
             }
+            removeCastleRights(BLACK_KINGSIDE);
+            removeCastleRights(BLACK_QUEENSIDE);
         } else {
             if (move.getTo() == 62){
                 pieceBitboards[wKING] |= (1ULL << move.getTo());
@@ -214,6 +216,8 @@ void Position::makeMove(Cmove move) { // TODO: FINSISH MAKEMOVE FUNCTION
                 pieceBitboards[wROOK] |= (1ULL << 59);
                 pieceBitboards[wROOK] ^= (1ULL << 56);
             }
+            removeCastleRights(WHITE_KINGSIDE);
+            removeCastleRights(WHITE_QUEENSIDE);
         }
         break;
     case EN_PASSANT:
@@ -235,7 +239,7 @@ void Position::makeMove(Cmove move) { // TODO: FINSISH MAKEMOVE FUNCTION
     moveLog.push_back(move);
 }
 
- void Position::unmakeMove(){
+ void Position::unmakeMove(){ // TODO: UPDATE CASTLING RIGHTS
     Cmove move = moveLog.back();
     PieceType piece = getPiceceAtSquare(move.getTo());
     PieceType captured = move.getCapturedPiece();
