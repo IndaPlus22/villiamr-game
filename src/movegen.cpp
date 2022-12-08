@@ -104,7 +104,6 @@ std::vector<Cmove> Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIG
     }else {
         originSQ = attacksEast >> 9;
     }
-    printBitboard(originSQ);
     while (originSQ){
         from = std::countr_zero(originSQ);
         to = std::countr_zero(attacksEast);
@@ -604,12 +603,17 @@ std::vector<Cmove> Position::queenMoves(){
 void Position::generateLegalMoves(){
     // Update masks for all pieces and colored pieces
     allBitboard = 0;
+    colorBitboards[WHITE] = 0;
+    colorBitboards[BLACK] = 0;
     for (PieceType i = wPAWN; i < bPAWN; i++) {
         this->colorBitboards[WHITE] |= this->pieceBitboards[i];
         this->colorBitboards[BLACK] |= this->pieceBitboards[i + 6];
         this->allBitboard |= this->pieceBitboards[i];
         this->allBitboard |= this->pieceBitboards[i + 6];
     }
+    printBitboard(allBitboard);
+    printBitboard(colorBitboards[WHITE]);
+    printBitboard(colorBitboards[BLACK]);
     
 
     legalMoves.clear();

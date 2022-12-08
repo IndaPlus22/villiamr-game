@@ -53,6 +53,12 @@ int main(){
                         }
                     }
                     currentState = move;
+                    SDL_RenderClear(renderer);
+                    graphicsBase.drawPosition(position);
+                    for (int square : highlightedSquares){
+                        graphicsBase.highlightSquare(square);
+                    }
+                    SDL_RenderPresent(renderer);
                 }
                 else if (currentState == move){
                     for (Cmove move : moves){
@@ -64,15 +70,18 @@ int main(){
                     }
                     highlightedSquares.clear();
                     currentState = select;
+                    SDL_RenderClear(renderer);
+                    graphicsBase.drawPosition(position);
+                    SDL_RenderPresent(renderer);
                 }
             }
         }
-        SDL_RenderClear(renderer);
-        graphicsBase.drawPosition(position);
-        for (int square : highlightedSquares){
-            graphicsBase.highlightSquare(square);
-        }
-        SDL_RenderPresent(renderer);
+        //SDL_RenderClear(renderer);
+        //graphicsBase.drawPosition(position);
+        //for (int square : highlightedSquares){
+        //    graphicsBase.highlightSquare(square);
+        //}
+        //SDL_RenderPresent(renderer);
     }
     
 
