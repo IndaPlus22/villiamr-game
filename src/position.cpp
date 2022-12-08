@@ -12,7 +12,8 @@ Position::Position(std::string fen) {
         this->allBitboard |= this->pieceBitboards[i];
         this->allBitboard |= this->pieceBitboards[i + 6];
     }
-
+    initSlidersAttacks(true); // INTIalize bishop attacks tables
+    initSlidersAttacks(false);  // Rook
 }
 
 void Position::initPosition(std::string fen) {

@@ -19,15 +19,27 @@ int main(){
     GraphicsBase graphicsBase(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
     Position position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
+    srand(time(NULL));
+
     position.generateLegalMoves();
     std::vector<Cmove> moves = position.getLegalMoves();
-    for (Cmove move : moves){
-        std::cout << move.getFrom() << " " << move.getTo() << std::endl;
+    int timer = 0;
+    SDL_Delay(1000);
+    int randMove;
+    for (int i = 0; i < 100;i++){
+        randMove = rand() % moves.size();
+        Cmove move = moves[randMove];
+        //std::cout << move.getFrom() << " " << move.getTo() << std::endl;
+        position.makeMove(move);
+        position.generateLegalMoves();
+        moves = position.getLegalMoves();
+        SDL_RenderClear(renderer);
+        graphicsBase.drawPosition(position);
+        SDL_RenderPresent(renderer);
+        SDL_Delay(600);
     }
 
-    SDL_RenderClear(renderer);
-    graphicsBase.drawPosition(position);
-    SDL_RenderPresent(renderer);
+    
 
 
     SDL_DestroyRenderer(renderer);

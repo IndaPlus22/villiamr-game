@@ -49,8 +49,13 @@ class Position {
         std::vector<Cmove> moveLog;
 
         std::vector<Cmove> pawnMoves();
+        std::vector<Cmove> knightMoves();
+        std::vector<Cmove> bishopMoves();
+        std::vector<Cmove> rookMoves();
+        std::vector<Cmove> queenMoves();
 
         void initPosition(std::string fen);
+        void initSlidersAttacks(bool is_bishop);
 
         PieceType getPiceceAtSquare(int square);
         
