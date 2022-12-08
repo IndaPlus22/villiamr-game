@@ -63,6 +63,7 @@ int main(){
                         }
                     }
                     highlightedSquares.clear();
+                    currentState = select;
                 }
             }
         }
