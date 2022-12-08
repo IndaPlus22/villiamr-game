@@ -12,14 +12,6 @@ Bitboard pawnSinglePush (Bitboard pieces, Bitboard occupied) {
     return moves;
 }
 
-template <PieceColor color>
-Bitboard pawnDubblePush (Bitboard pieces, Bitboard occupied) {
-    Bitboard moves = 0;
-    pieces &= color == WHITE ? RANK_7 : RANK_2;
-    moves = color == WHITE ? pieces >> 16 : pieces << 16;
-    moves &= ~occupied;
-    return moves;
-}
 
 template <PieceColor color>
 Bitboard pawnAttacksEast (Bitboard pieces, Bitboard enemy) {
@@ -41,10 +33,10 @@ Bitboard pawnAttacksWest (Bitboard pieces, Bitboard enemy) {
 
 std::vector<Cmove> Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIGIN SQUARES ARE NOT CORRECT
     std::vector<Cmove> moves;
-    Bitboard singlePush;
-    Bitboard dubblePush;
-    Bitboard attacksEast;
-    Bitboard attacksWest;
+    Bitboard singlePush = 0;
+    Bitboard dubblePush = 0;
+    Bitboard attacksEast = 0;
+    Bitboard attacksWest = 0;
 
     // Generate pawn moves
     if ( sideToMove == WHITE){
@@ -70,18 +62,16 @@ std::vector<Cmove> Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIG
         }
     }
 
-    Bitboard originSQ;
+    Bitboard originSQ = 0;
     int from;
     int to;
 
-    // Generate single push moves
+    // Generate single push moves       NOTE: THIS WORKS
     if (sideToMove == WHITE){
         originSQ = pawnSinglePush<BLACK>(singlePush, 0);
     }else {
         originSQ = pawnSinglePush<WHITE>(singlePush, 0);
     }
-    printBitboard(originSQ);
-    printBitboard(singlePush);
     while (singlePush){
         from = std::countr_zero(originSQ);
         to = std::countr_zero(singlePush);
@@ -91,14 +81,15 @@ std::vector<Cmove> Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIG
     }
 
     // Generate dubble push moves
-    if (sideToMove == WHITE){
+    originSQ = 0;
+    if (sideToMove == WHITE){ // NOTE: THIS WORKS
         originSQ = pawnSinglePush<BLACK>(pawnSinglePush<BLACK>(dubblePush,0), 0); // UGLY ASF but i have no time
         originSQ &= RANK_7;
     }else {
         originSQ = pawnSinglePush<WHITE>(pawnSinglePush<WHITE>(dubblePush,0), 0);
         originSQ &= RANK_2;
     }
-    while (dubblePush){
+    while (originSQ){
         from = std::countr_zero(originSQ);
         to = std::countr_zero(dubblePush);
         dubblePush ^= 1ULL << to;
@@ -107,12 +98,14 @@ std::vector<Cmove> Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIG
     }
 
     // Generate attacks east moves
+    originSQ = 0;
     if (sideToMove == WHITE){
-        originSQ = pawnAttacksWest<BLACK>(attacksEast, 0);
+        originSQ = attacksEast << 7; // NOTE: PROBLEM IS HERE
     }else {
-        originSQ = pawnAttacksWest<WHITE>(attacksEast, 0);
+        originSQ = attacksEast >> 9;
     }
-    while (attacksEast){
+    printBitboard(originSQ);
+    while (originSQ){
         from = std::countr_zero(originSQ);
         to = std::countr_zero(attacksEast);
         attacksEast ^= 1ULL << to;
@@ -121,12 +114,13 @@ std::vector<Cmove> Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIG
     }
 
     // Generate attacks west moves
+    originSQ = 0;
     if (sideToMove == WHITE){
-        originSQ = pawnAttacksEast<BLACK>(attacksWest, 0);
+        originSQ = attacksWest << 9; // NOTE: PROBLEM IS HERE
     }else {
-        originSQ = pawnAttacksEast<WHITE>(attacksWest, 0);
+        originSQ = attacksWest >> 7;
     }
-    while (attacksWest){
+    while (originSQ){
         from = std::countr_zero(originSQ);
         to = std::countr_zero(attacksWest);
         attacksWest ^= 1ULL << to;
@@ -622,7 +616,7 @@ void Position::generateLegalMoves(){
 
     // Generate legal moves for all pieces
     std::vector<Cmove> pawnmoves = pawnMoves();
-    //legalMoves.insert(legalMoves.end(), pawnmoves.begin(), pawnmoves.end());
+    legalMoves.insert(legalMoves.end(), pawnmoves.begin(), pawnmoves.end());
 
     std::vector<Cmove> knightmoves = knightMoves();
     legalMoves.insert(legalMoves.end(), knightmoves.begin(), knightmoves.end());

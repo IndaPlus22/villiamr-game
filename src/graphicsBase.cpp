@@ -56,3 +56,9 @@ void GraphicsBase::drawPosition(Position position) { // TODO: THIS FUNCTION SHOU
         }
     }
 }
+
+void GraphicsBase::highlightSquare(int square) {
+    SDL_SetRenderDrawColor(this->renderer, 0, 255, 0, 255);
+    SDL_Rect rect = {square % 8 * this->squareSize, square / 8 * this->squareSize, this->squareSize, this->squareSize};
+    SDL_RenderDrawRect(this->renderer, &rect);
+}

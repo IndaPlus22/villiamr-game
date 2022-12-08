@@ -16,6 +16,7 @@ public:
     ~GraphicsBase();
 
     void drawPosition(Position position);
+    void highlightSquare(int square);
 
 private:
     SDL_Renderer* renderer;
