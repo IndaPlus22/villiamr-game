@@ -58,8 +58,14 @@ std::vector<Cmove> Position::pawnMoves(){ // TODO: ADD ENPASSANT AND PROMOTION H
         attacksWest = pawnAttacksWest<BLACK>(pieceBitboards[bPAWN], colorBitboards[WHITE]);
     }
 
-    if ( enPassantSquare != -1){ // TODO: ADD THIS ENPASSANT TO THE MOVE GENERATOR
-        Bitboard enPassant = 1ULL << enPassantSquare;       
+    if ( enPassantSquare != -1){ 
+        Bitboard enPassant = 1ULL << enPassantSquare; 
+        if ( attacksEast & enPassant){
+            moves.push_back(Cmove(sideToMove == WHITE ? enPassantSquare + 7 : enPassantSquare - 7, enPassantSquare, EN_PASSANT));
+        }
+        if(attacksWest & enPassant){
+            moves.push_back(Cmove(sideToMove == WHITE ? enPassantSquare + 9 : enPassantSquare - 9, enPassantSquare, EN_PASSANT));
+        }
     }
 
     Bitboard originSQ;
@@ -77,7 +83,7 @@ std::vector<Cmove> Position::pawnMoves(){ // TODO: ADD ENPASSANT AND PROMOTION H
         to = std::countr_zero(singlePush);
         singlePush ^= 1ULL << to;
         originSQ ^= 1ULL << from;
-        moves.push_back(Cmove(from, to, NORMAL));
+        moves.push_back(Cmove(from, to, sideToMove == WHITE ? (to < 8 ? PROMOTION : NORMAL) : (to > 55 ? PROMOTION : NORMAL)));
     }
 
     // Generate dubble push moves
@@ -105,7 +111,7 @@ std::vector<Cmove> Position::pawnMoves(){ // TODO: ADD ENPASSANT AND PROMOTION H
         to = std::countr_zero(attacksEast);
         attacksEast ^= 1ULL << to;
         originSQ ^= 1ULL << from;
-        moves.push_back(Cmove(from, to, CAPTURE));
+        moves.push_back(Cmove(from, to, sideToMove == WHITE ? (to < 8 ? PROMOTION_CAPTURE : CAPTURE) : (to > 55 ? PROMOTION_CAPTURE : CAPTURE)));
     }
 
     // Generate attacks west moves
@@ -119,7 +125,7 @@ std::vector<Cmove> Position::pawnMoves(){ // TODO: ADD ENPASSANT AND PROMOTION H
         to = std::countr_zero(attacksWest);
         attacksWest ^= 1ULL << to;
         originSQ ^= 1ULL << from;
-        moves.push_back(Cmove(from, to, CAPTURE));
+        moves.push_back(Cmove(from, to, sideToMove == WHITE ? (to < 8 ? PROMOTION_CAPTURE : CAPTURE) : (to > 55 ? PROMOTION_CAPTURE : CAPTURE)));
     }
 
     return moves;
