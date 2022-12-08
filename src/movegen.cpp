@@ -11,7 +11,7 @@ Bitboard pawnSinglePush (Bitboard pieces, Bitboard occupied) {
 template <PieceColor color>
 Bitboard pawnDubblePush (Bitboard pieces, Bitboard occupied) {
     Bitboard moves = 0;
-    pieces &= color == WHITE ? RANK_2 : RANK_7;
+    pieces &= color == WHITE ? RANK_7 : RANK_2;
     moves = color == WHITE ? pieces >> 16 : pieces << 16;
     moves &= ~occupied;
     return moves;
@@ -37,14 +37,12 @@ Bitboard pawnAttacksWest (Bitboard pieces, Bitboard enemy) {
 
 
 
-std::vector<Cmove> Position::pawnMoves(){
+std::vector<Cmove> Position::pawnMoves(){ // TODO: ADD ENPASSANT AND PROMOTION HANDLING
     std::vector<Cmove> moves;
     Bitboard singlePush;
     Bitboard dubblePush;
     Bitboard attacksEast;
     Bitboard attacksWest;
-    int pop;
-
 
     // Generate pawn moves
     if ( sideToMove == WHITE){
@@ -60,6 +58,70 @@ std::vector<Cmove> Position::pawnMoves(){
         attacksWest = pawnAttacksWest<BLACK>(pieceBitboards[bPAWN], colorBitboards[WHITE]);
     }
 
+    if ( enPassantSquare != -1){ // TODO: ADD THIS ENPASSANT TO THE MOVE GENERATOR
+        Bitboard enPassant = 1ULL << enPassantSquare;       
+    }
+
+    Bitboard originSQ;
+    int from;
+    int to;
+
+    // Generate single push moves
+    if (sideToMove == WHITE){
+        originSQ = pawnSinglePush<BLACK>(singlePush, 0);
+    }else {
+        originSQ = pawnSinglePush<WHITE>(singlePush, 0);
+    }
+    while (singlePush){
+        from = std::countr_zero(originSQ);
+        to = std::countr_zero(singlePush);
+        singlePush ^= 1ULL << to;
+        originSQ ^= 1ULL << from;
+        moves.push_back(Cmove(from, to, NORMAL));
+    }
+
+    // Generate dubble push moves
+    if (sideToMove == WHITE){
+        originSQ = pawnSinglePush<BLACK>(pawnSinglePush<BLACK>(dubblePush,0), 0); // UGLY ASF but i have no time
+    }else {
+        originSQ = pawnSinglePush<WHITE>(pawnSinglePush<WHITE>(dubblePush,0), 0);
+    }
+    while (dubblePush){
+        from = std::countr_zero(originSQ);
+        to = std::countr_zero(dubblePush);
+        dubblePush ^= 1ULL << to;
+        originSQ ^= 1ULL << from;
+        moves.push_back(Cmove(from, to, NORMAL));
+    }
+
+    // Generate attacks east moves
+    if (sideToMove == WHITE){
+        originSQ = pawnAttacksWest<BLACK>(attacksEast, 0);
+    }else {
+        originSQ = pawnAttacksWest<WHITE>(attacksEast, 0);
+    }
+    while (attacksEast){
+        from = std::countr_zero(originSQ);
+        to = std::countr_zero(attacksEast);
+        attacksEast ^= 1ULL << to;
+        originSQ ^= 1ULL << from;
+        moves.push_back(Cmove(from, to, CAPTURE));
+    }
+
+    // Generate attacks west moves
+    if (sideToMove == WHITE){
+        originSQ = pawnAttacksEast<BLACK>(attacksWest, 0);
+    }else {
+        originSQ = pawnAttacksEast<WHITE>(attacksWest, 0);
+    }
+    while (attacksWest){
+        from = std::countr_zero(originSQ);
+        to = std::countr_zero(attacksWest);
+        attacksWest ^= 1ULL << to;
+        originSQ ^= 1ULL << from;
+        moves.push_back(Cmove(from, to, CAPTURE));
+    }
+
     return moves;
 }
 
@@ -71,12 +133,11 @@ void Position::generateLegalMoves(){
     }
     allBitboard = colorBitboards[WHITE] | colorBitboards[BLACK];
 
-
-    std::vector<Cmove> legalMoves;
+    legalMoves.clear();
 
     // Generate legal moves for all pieces
     std::vector<Cmove> pawnmoves = pawnMoves();
-
+    legalMoves.insert(legalMoves.end(), pawnmoves.begin(), pawnmoves.end());
 }
 
 

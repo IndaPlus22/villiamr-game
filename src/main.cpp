@@ -20,8 +20,10 @@ int main(){
     Position position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
     position.generateLegalMoves();
-    position.makeMove(Cmove(12, 20, NORMAL));
-    position.generateLegalMoves();
+    std::vector<Cmove> moves = position.getLegalMoves();
+    for (Cmove move : moves){
+        std::cout << move.getFrom() << " " << move.getTo() << std::endl;
+    }
 
     SDL_RenderClear(renderer);
     graphicsBase.drawPosition(position);
