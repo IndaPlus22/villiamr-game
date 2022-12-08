@@ -53,6 +53,7 @@ class Position {
         std::vector<Cmove> bishopMoves();
         std::vector<Cmove> rookMoves();
         std::vector<Cmove> queenMoves();
+        std::vector<Cmove> kingMoves();
 
         void initPosition(std::string fen);
         void initSlidersAttacks(bool is_bishop);

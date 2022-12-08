@@ -112,7 +112,7 @@ void Position::initPosition(std::string fen) {
     } else {
         sideToMove = BLACK;
     }
-    stringIndex++;
+    stringIndex += 2;
 
     castlingRights = 0;
     for (char c: fen.substr(stringIndex, 4)) {

@@ -564,7 +564,7 @@ std::vector<Cmove> Position::rookMoves(){
     while (rooks) {
         int square = std::countr_zero(rooks);
         rooks ^= (1ULL << square);
-        Bitboard attacks = rookAttacksInit(square, allBitboard);
+        Bitboard attacks = getRookAttacks(square, allBitboard);
         attacks &= ~colorBitboards[sideToMove];
         //printBitboard(attacks);
         while (attacks) {
@@ -600,6 +600,64 @@ std::vector<Cmove> Position::queenMoves(){
     return moves;
 }
 
+const Bitboard kingAttacks [64]{
+    0x302, 0x705, 0xE0A, 0x1C14, 0x3828, 0x7050, 0xE0A0, 0xC040,
+    0x30203, 0x70507, 0xE0A0E, 0x1C141C, 0x382838, 0x705070, 0xE0A0E0, 0xC040C0,
+    0x3020300, 0x7050700, 0xE0A0E00, 0x1C141C00, 0x38283800, 0x70507000, 0xE0A0E000, 0xC040C000,
+    0x302030000, 0x705070000, 0xE0A0E0000, 0x1C141C0000, 0x3828380000, 0x7050700000, 0xE0A0E00000, 0xC040C00000,
+    0x30203000000, 0x70507000000, 0xE0A0E000000, 0x1C141C000000, 0x382838000000, 0x705070000000, 0xE0A0E0000000, 0xC040C0000000,
+    0x3020300000000, 0x7050700000000, 0xE0A0E00000000, 0x1C141C00000000, 0x38283800000000, 0x70507000000000, 0xE0A0E000000000, 0xC040C000000000,
+    0x302030000000000, 0x705070000000000, 0xE0A0E0000000000, 0x1C141C0000000000, 0x3828380000000000, 0x7050700000000000, 0xE0A0E00000000000, 0xC040C00000000000,
+    0x203000000000000, 0x507000000000000, 0xA0E000000000000, 0x141C000000000000, 0x2838000000000000, 0x5070000000000000, 0xA0E0000000000000, 0x40C0000000000000
+};
+
+
+std::vector<Cmove> Position::kingMoves(){
+    Bitboard king = pieceBitboards[sideToMove == WHITE ? wKING : bKING];
+    std::vector<Cmove> moves;
+    
+    int square = std::countr_zero(king);
+    king ^= (1ULL << square);
+
+    Bitboard attacks = kingAttacks[square];
+    attacks &= ~colorBitboards[sideToMove];
+    while (attacks) {
+        int to = std::countr_zero(attacks);
+        attacks ^= (1ULL << to);
+
+        moves.push_back(Cmove(square, to, getPiceceAtSquare(to) == NO_PIECE ? NORMAL : CAPTURE));
+    }
+    
+
+    if (sideToMove == WHITE) {
+        if (castlingRights & (1 << WHITE_KINGSIDE)){
+            if (!(allBitboard & 0x6000000000000000)) {
+                moves.push_back(Cmove(60, 62, CASTELING));
+            }
+        }
+        if (castlingRights & (1 << WHITE_QUEENSIDE)){
+            if (!(allBitboard & 0xE00000000000000)) {
+                moves.push_back(Cmove(60, 58, CASTELING));
+            }
+        }
+    }else{
+        if (castlingRights & (1 << BLACK_KINGSIDE)){
+            if (!(allBitboard & 0x60)) {
+                moves.push_back(Cmove(4, 6, CASTELING));
+            }
+        }
+        if (castlingRights & (1 << BLACK_QUEENSIDE)){
+            if (!(allBitboard & 0xE)) {
+                moves.push_back(Cmove(4, 2, CASTELING));
+            }
+        }
+    }
+    
+    
+    
+    return moves;
+}
+
 void Position::generateLegalMoves(){
     // Update masks for all pieces and colored pieces
     allBitboard = 0;
@@ -611,9 +669,6 @@ void Position::generateLegalMoves(){
         this->allBitboard |= this->pieceBitboards[i];
         this->allBitboard |= this->pieceBitboards[i + 6];
     }
-    printBitboard(allBitboard);
-    printBitboard(colorBitboards[WHITE]);
-    printBitboard(colorBitboards[BLACK]);
     
 
     legalMoves.clear();
@@ -633,6 +688,9 @@ void Position::generateLegalMoves(){
 
     std::vector<Cmove> queenmoves = queenMoves();
     legalMoves.insert(legalMoves.end(), queenmoves.begin(), queenmoves.end());
+
+    std::vector<Cmove> kingmoves = kingMoves();
+    legalMoves.insert(legalMoves.end(), kingmoves.begin(), kingmoves.end());
 }
 
 
