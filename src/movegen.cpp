@@ -54,13 +54,15 @@ std::vector<Cmove> Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIG
 
     if ( enPassantSquare != -1){ 
         Bitboard enPassant = 1ULL << enPassantSquare; 
-        if ( attacksEast & enPassant){
+        if ( getPiceceAtSquare(enPassantSquare + 7) == wPAWN || getPiceceAtSquare(enPassantSquare - 7) == bPAWN){
             moves.push_back(Cmove(sideToMove == WHITE ? enPassantSquare + 7 : enPassantSquare - 7, enPassantSquare, EN_PASSANT));
         }
-        if(attacksWest & enPassant){
+        if(getPiceceAtSquare(enPassantSquare + 9) == wPAWN || getPiceceAtSquare(enPassantSquare - 9) == bPAWN){
             moves.push_back(Cmove(sideToMove == WHITE ? enPassantSquare + 9 : enPassantSquare - 9, enPassantSquare, EN_PASSANT));
         }
     }
+
+    attackboard |= attacksEast | attacksWest;
 
     Bitboard originSQ = 0;
     int from;
@@ -72,7 +74,7 @@ std::vector<Cmove> Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIG
     }else {
         originSQ = pawnSinglePush<WHITE>(singlePush, 0);
     }
-    while (singlePush){
+    while (singlePush && originSQ){
         from = std::countr_zero(originSQ);
         to = std::countr_zero(singlePush);
         singlePush ^= 1ULL << to;
@@ -83,13 +85,13 @@ std::vector<Cmove> Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIG
     // Generate dubble push moves
     originSQ = 0;
     if (sideToMove == WHITE){ // NOTE: THIS WORKS
-        originSQ = pawnSinglePush<BLACK>(pawnSinglePush<BLACK>(dubblePush,0), 0); // UGLY ASF but i have no time
+        originSQ = dubblePush << 16; // UGLY ASF but i have no time
         originSQ &= RANK_7;
     }else {
-        originSQ = pawnSinglePush<WHITE>(pawnSinglePush<WHITE>(dubblePush,0), 0);
+        originSQ = dubblePush >> 16;
         originSQ &= RANK_2;
     }
-    while (originSQ){
+    while (originSQ && dubblePush){
         from = std::countr_zero(originSQ);
         to = std::countr_zero(dubblePush);
         dubblePush ^= 1ULL << to;
@@ -104,7 +106,7 @@ std::vector<Cmove> Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIG
     }else {
         originSQ = attacksEast >> 9;
     }
-    while (originSQ){
+    while (originSQ && attacksEast){
         from = std::countr_zero(originSQ);
         to = std::countr_zero(attacksEast);
         attacksEast ^= 1ULL << to;
@@ -119,7 +121,7 @@ std::vector<Cmove> Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIG
     }else {
         originSQ = attacksWest >> 7;
     }
-    while (originSQ){
+    while (originSQ && attacksWest){
         from = std::countr_zero(originSQ);
         to = std::countr_zero(attacksWest);
         attacksWest ^= 1ULL << to;
@@ -152,6 +154,7 @@ std::vector<Cmove> Position::knightMoves(){
     while (knights){
         int from = std::countr_zero(knights);
         Bitboard attacks = KNIGHT_ATTACKS[from] & ~colorBitboards[sideToMove];
+        attackboard |= attacks;
         while (attacks){
             int to = std::countr_zero(attacks);
             attacks ^= 1ULL << to;
@@ -545,7 +548,7 @@ std::vector<Cmove> Position::bishopMoves(){
         bishops ^= (1ULL << square);
         Bitboard attacks = getBishopAttacks(square, allBitboard);
         attacks &= ~colorBitboards[sideToMove];
-        //printBitboard(attacks);
+        attackboard |= attacks;
         while (attacks) {
             int to = std::countr_zero(attacks);
             attacks ^= (1ULL << to);
@@ -566,7 +569,7 @@ std::vector<Cmove> Position::rookMoves(){
         rooks ^= (1ULL << square);
         Bitboard attacks = getRookAttacks(square, allBitboard);
         attacks &= ~colorBitboards[sideToMove];
-        //printBitboard(attacks);
+        attackboard |= attacks;
         while (attacks) {
             int to = std::countr_zero(attacks);
             //std::cout << "square: " << to << std::endl;
@@ -589,6 +592,7 @@ std::vector<Cmove> Position::queenMoves(){
 
         Bitboard attacks = getRookAttacks(square, allBitboard) | getBishopAttacks(square, allBitboard);
         attacks &= ~colorBitboards[sideToMove];
+        attackboard |= attacks;
         while (attacks) {
             int to = std::countr_zero(attacks);
             attacks ^= (1ULL << to);
@@ -621,6 +625,7 @@ std::vector<Cmove> Position::kingMoves(){
 
     Bitboard attacks = kingAttacks[square];
     attacks &= ~colorBitboards[sideToMove];
+    attackboard |= attacks;
     while (attacks) {
         int to = std::countr_zero(attacks);
         attacks ^= (1ULL << to);
@@ -673,6 +678,13 @@ void Position::generateLegalMoves(){
 
     legalMoves.clear();
 
+    // Check if king is in check and pinned pieces
+    printBitboard(attackboard);
+    if (pieceBitboards[sideToMove == WHITE ? wKING : bKING] & attackboard) {
+        std::cout << "check" << std::endl;
+    }
+
+    attackboard = 0;
     // Generate legal moves for all pieces
     std::vector<Cmove> pawnmoves = pawnMoves();
     legalMoves.insert(legalMoves.end(), pawnmoves.begin(), pawnmoves.end());

@@ -6,6 +6,8 @@ Position::Position(std::string fen) {
     this->allBitboard = 0;
     this->colorBitboards[WHITE] = 0;
     this->colorBitboards[BLACK] = 0; 
+    this->enPassantSquare = -1;
+    this->attackboard = 0;
     for (PieceType i = wPAWN; i < bPAWN; i++) {
         this->colorBitboards[WHITE] |= this->pieceBitboards[i];
         this->colorBitboards[BLACK] |= this->pieceBitboards[i + 6];
@@ -210,11 +212,14 @@ void Position::makeMove(Cmove move) { // TODO: UPDATE CASTLING RIGHTS FOR ROOK M
 
     // En_Passant square handeling
     if (piece == wPAWN || piece == bPAWN){
-        if (piece == wPAWN && RANK_7 & (1ULL << move.getFrom()) != 0 && RANK_5 & (1ULL << move.getTo()) != 0){
+        if (piece == wPAWN && (RANK_7 & (1ULL << move.getFrom())) != 0 && (RANK_5 & (1ULL << move.getTo())) != 0){
             enPassantSquare = move.getTo() + 8;
         }
-        else if (piece == bPAWN && RANK_2 & (1ULL << move.getFrom()) != 0 && RANK_4 & (1ULL << move.getTo()) != 0){
+        else if (piece == bPAWN && (RANK_2 & (1ULL << move.getFrom())) != 0 && (RANK_4 & (1ULL << move.getTo())) != 0){
             enPassantSquare = move.getTo() - 8;
+        }
+        else{
+            enPassantSquare = -1;
         }
     }else{
         enPassantSquare = -1;

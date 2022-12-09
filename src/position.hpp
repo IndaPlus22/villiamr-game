@@ -39,7 +39,8 @@ class Position {
     private:
         Bitboard pieceBitboards[12];
         Bitboard colorBitboards[2];
-        Bitboard allBitboard; 
+        Bitboard allBitboard;
+        Bitboard attackboard; 
 
         PieceColor sideToMove;
         uint8_t castlingRights;
