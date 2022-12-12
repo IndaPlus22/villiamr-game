@@ -1,5 +1,7 @@
 #include "position.hpp"
 
+std::mutex mtx;
+
 /*
     PAWN MOVES
 */
@@ -62,7 +64,7 @@ Bitboard pawnAttacksWest (Bitboard pieces, Bitboard enemy) {
     return moves;
 }
 
-std::vector<Cmove> Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIGIN SQUARES ARE NOT CORRECT
+void Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIGIN SQUARES ARE NOT CORRECT
     std::vector<Cmove> moves;
     Bitboard pawms = pieceBitboards[sideToMove == WHITE ? wPAWN : bPAWN] ^ (pins & pieceBitboards[sideToMove == WHITE ? wPAWN : bPAWN]);
     Bitboard singlePush = 0;
@@ -171,7 +173,7 @@ std::vector<Cmove> Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIG
         moves.push_back(Cmove(from, to, sideToMove == WHITE ? (to < 8 ? PROMOTION_CAPTURE : CAPTURE) : (to > 55 ? PROMOTION_CAPTURE : CAPTURE)));
     }
 
-    return moves;
+    legalMoves.insert(legalMoves.end(), moves.begin(), moves.end());
 }
 
 /* 
@@ -188,7 +190,7 @@ const Bitboard KNIGHT_ATTACKS[64] = {
   0x4020000000000, 0x8050000000000, 0x110A0000000000, 0x22140000000000, 0x44280000000000, 0x88500000000000, 0x10A00000000000, 0x20400000000000
 };
 
-std::vector<Cmove> Position::knightMoves(){
+void Position::knightMoves(){
     std::vector<Cmove> moves;
     Bitboard knights = pieceBitboards[sideToMove == WHITE ? wKNIGHT : bKNIGHT] ^ (pins & pieceBitboards[sideToMove == WHITE ? wKNIGHT : bKNIGHT]);
 
@@ -210,7 +212,7 @@ std::vector<Cmove> Position::knightMoves(){
         knights ^= 1ULL << from;
     }
 
-    return moves;
+    legalMoves.insert(legalMoves.end(), moves.begin(), moves.end());
 }
 
 /*
@@ -586,7 +588,7 @@ Bitboard getRookAttacks(int square, Bitboard occupancy){
     return rookAttacks[square][occupancy];
 }
 
-std::vector<Cmove> Position::bishopMoves(){
+void Position::bishopMoves(){
     Bitboard bishops = pieceBitboards[sideToMove == WHITE ? wBISHOP : bBISHOP] ^ (pins & pieceBitboards[sideToMove == WHITE ? wBISHOP : bBISHOP]);
     std::vector<Cmove> moves;
 
@@ -609,10 +611,10 @@ std::vector<Cmove> Position::bishopMoves(){
         }
     }
     
-    return moves;
+    legalMoves.insert(legalMoves.end(), moves.begin(), moves.end());
 }
 
-std::vector<Cmove> Position::rookMoves(){
+void Position::rookMoves(){
     Bitboard rooks = pieceBitboards[sideToMove == WHITE ? wROOK : bROOK] ^ (pins & pieceBitboards[sideToMove == WHITE ? wROOK : bROOK]);
     std::vector<Cmove> moves;
 
@@ -636,10 +638,10 @@ std::vector<Cmove> Position::rookMoves(){
         }
     }
     
-    return moves;
+    legalMoves.insert(legalMoves.end(), moves.begin(), moves.end());
 }
 
-std::vector<Cmove> Position::queenMoves(){
+void Position::queenMoves(){
     Bitboard queen = pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN] ^ (pins & pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN]);
     std::vector<Cmove> moves;
 
@@ -663,7 +665,7 @@ std::vector<Cmove> Position::queenMoves(){
         }
     }
     
-    return moves;
+    legalMoves.insert(legalMoves.end(), moves.begin(), moves.end());
 }
 
 const Bitboard kingAttacks [64]{
@@ -678,7 +680,7 @@ const Bitboard kingAttacks [64]{
 };
 
 
-std::vector<Cmove> Position::kingMoves(){
+void Position::kingMoves(){
     Bitboard king = pieceBitboards[sideToMove == WHITE ? wKING : bKING];
     std::vector<Cmove> moves;
     
@@ -722,8 +724,7 @@ std::vector<Cmove> Position::kingMoves(){
     }
     
     
-    
-    return moves;
+    legalMoves.insert(legalMoves.end(), moves.begin(), moves.end());
 }
 
 
@@ -838,6 +839,8 @@ void Position::generateLegalMoves(){
         this->allBitboard |= this->pieceBitboards[i];
         this->allBitboard |= this->pieceBitboards[i + 6];
     }
+
+    std::thread threads[6]; 
     
 
     legalMoves.clear();
@@ -848,23 +851,13 @@ void Position::generateLegalMoves(){
     getPinsAndChecks();
     getAttackboard();
 
-    std::vector<Cmove> pawnmoves = pawnMoves();
-    legalMoves.insert(legalMoves.end(), pawnmoves.begin(), pawnmoves.end());
+    pawnMoves();
+    knightMoves();
+    bishopMoves();
+    rookMoves();
+    queenMoves();
+    kingMoves();
 
-    std::vector<Cmove> knightmoves = knightMoves();
-    legalMoves.insert(legalMoves.end(), knightmoves.begin(), knightmoves.end());
-
-    std::vector<Cmove> bishopmoves = bishopMoves();
-    legalMoves.insert(legalMoves.end(), bishopmoves.begin(), bishopmoves.end());
-
-    std::vector<Cmove> rookmoves = rookMoves();
-    legalMoves.insert(legalMoves.end(), rookmoves.begin(), rookmoves.end());
-
-    std::vector<Cmove> queenmoves = queenMoves();
-    legalMoves.insert(legalMoves.end(), queenmoves.begin(), queenmoves.end());
-
-    std::vector<Cmove> kingmoves = kingMoves();
-    legalMoves.insert(legalMoves.end(), kingmoves.begin(), kingmoves.end());
 }
 
 

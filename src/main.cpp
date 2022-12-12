@@ -15,12 +15,27 @@ int getSquare (int x, int y){
     return (x / 125) + (y / 125) * 8;
 }
 
+Bitboard perft(int depth, Position position){
+    if (depth == 0){
+        return 1;
+    }
+    Bitboard nodes = 0;
+    position.generateLegalMoves();
+    std::vector<Cmove> moves = position.getLegalMoves();
+    for (Cmove move : moves){
+        position.makeMove(move);
+        nodes += perft(depth - 1, position);
+        position.unmakeMove();
+    }
+    return nodes;
+}
+
 int main(){
     SDL_Init(SDL_INIT_EVERYTHING);
     SDL_Window* window = SDL_CreateWindow("Chess", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     GraphicsBase graphicsBase(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
-    Position position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    Position position("r6r/1b2k1bq/8/8/7B/8/8/R3K2R w KQkq - 0 1"); // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 
     bool quit = false;
@@ -82,6 +97,17 @@ int main(){
                 if (event.key.keysym.sym == SDLK_u){
                     position.unmakeMove();
                     movemade = true;
+                }
+                if(event.key.keysym.sym == SDLK_p){
+                    // TIME EXECUTION OF PERFT
+                    auto start = std::chrono::high_resolution_clock::now();
+                    int nodes = perft(5, position);
+                    auto end = std::chrono::high_resolution_clock::now();
+                    std::chrono::duration<double> elapsed = end - start;
+
+                    std::cout << "Nodes searched: "<< nodes << std::endl;
+                    std::cout << "Time: " << elapsed.count() << std::endl;
+                    std::cout << "Nodes per second: " << nodes / elapsed.count() << std::endl;
                 }
             }
         }

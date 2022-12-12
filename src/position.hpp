@@ -5,6 +5,8 @@
 #include <vector>
 #include <iostream>
 #include <bit>
+#include <thread>
+#include <mutex>
 #include "types.hpp"
 
 class Position {
@@ -53,12 +55,12 @@ class Position {
         void getPinsAndChecks();
         void getAttackboard();
 
-        std::vector<Cmove> pawnMoves();
-        std::vector<Cmove> knightMoves();
-        std::vector<Cmove> bishopMoves();
-        std::vector<Cmove> rookMoves();
-        std::vector<Cmove> queenMoves();
-        std::vector<Cmove> kingMoves();
+        void pawnMoves();
+        void knightMoves();
+        void bishopMoves();
+        void rookMoves();
+        void queenMoves();
+        void kingMoves();
 
         void initPosition(std::string fen);
         void initSlidersAttacks(bool is_bishop);
