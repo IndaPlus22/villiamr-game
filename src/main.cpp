@@ -35,6 +35,9 @@ int main(){
         if(movemade){
             position.generateLegalMoves();
             moves = position.getLegalMoves();
+            if(moves.size() == 0){
+                quit = true;
+            }
             movemade = false;
         }
         while (SDL_PollEvent(&event)){
@@ -73,6 +76,12 @@ int main(){
                     SDL_RenderClear(renderer);
                     graphicsBase.drawPosition(position);
                     SDL_RenderPresent(renderer);
+                }
+            }
+            if (event.type == SDL_KEYDOWN){
+                if (event.key.keysym.sym == SDLK_u){
+                    position.unmakeMove();
+                    movemade = true;
                 }
             }
         }

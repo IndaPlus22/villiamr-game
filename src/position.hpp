@@ -35,12 +35,13 @@ class Position {
         void unmakeMove();
 
 
-
     private:
         Bitboard pieceBitboards[12];
         Bitboard colorBitboards[2];
         Bitboard allBitboard;
         Bitboard attackboard; 
+        Bitboard pins;
+        Bitboard checks;
 
         PieceColor sideToMove;
         uint8_t castlingRights;
@@ -48,6 +49,9 @@ class Position {
 
         std::vector<Cmove> legalMoves;
         std::vector<Cmove> moveLog;
+
+        void getPinsAndChecks();
+        void getAttackboard();
 
         std::vector<Cmove> pawnMoves();
         std::vector<Cmove> knightMoves();

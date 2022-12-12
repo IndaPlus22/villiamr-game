@@ -297,7 +297,7 @@ void Position::makeMove(Cmove move) { // TODO: UPDATE CASTLING RIGHTS FOR ROOK M
     Move fromSQ = move.getFrom();
     moveLog.pop_back();
     sideToMove++; // SWITches back move turn
-
+    
     // Gives back castling rights
     if (move.getRemovedCastelingRights() != 0){             
         castlingRights |= move.getRemovedCastelingRights();
@@ -309,9 +309,8 @@ void Position::makeMove(Cmove move) { // TODO: UPDATE CASTLING RIGHTS FOR ROOK M
 
     switch (move.getType()) {
     case NORMAL: // When no pieces are removed we reverse make move function
-        move.setFrom(move.getTo());
-        move.setTo(fromSQ);
-        makeMove(move);
+        pieceBitboards[piece] ^= (1ULL << move.getTo());
+        pieceBitboards[piece] |= (1ULL << move.getFrom());
         break;
     case CASTELING:
         if (sideToMove == BLACK){
