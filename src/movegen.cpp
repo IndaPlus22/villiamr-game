@@ -699,23 +699,23 @@ std::vector<Cmove> Position::kingMoves(){
 
     if (sideToMove == WHITE) {
         if (castlingRights & (1 << WHITE_KINGSIDE)){
-            if (!(allBitboard & 0x6000000000000000)) {
+            if (!(allBitboard & 0x6000000000000000) && !(attackboard & 0x6000000000000000)) {
                 moves.push_back(Cmove(60, 62, CASTELING));
             }
         }
         if (castlingRights & (1 << WHITE_QUEENSIDE)){
-            if (!(allBitboard & 0xE00000000000000)) {
+            if (!(allBitboard & 0xE00000000000000) && !(attackboard & 0xE00000000000000)) {
                 moves.push_back(Cmove(60, 58, CASTELING));
             }
         }
     }else{
         if (castlingRights & (1 << BLACK_KINGSIDE)){
-            if (!(allBitboard & 0x60)) {
+            if (!(allBitboard & 0x60) && !(attackboard & 0x60)) {
                 moves.push_back(Cmove(4, 6, CASTELING));
             }
         }
         if (castlingRights & (1 << BLACK_QUEENSIDE)){
-            if (!(allBitboard & 0xE)) {
+            if (!(allBitboard & 0xE) && !(attackboard & 0xE)) {
                 moves.push_back(Cmove(4, 2, CASTELING));
             }
         }
