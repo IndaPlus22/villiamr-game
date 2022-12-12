@@ -847,7 +847,6 @@ void Position::generateLegalMoves(){
 
     getPinsAndChecks();
     getAttackboard();
-    printBitboard(attackboard);
 
     std::vector<Cmove> pawnmoves = pawnMoves();
     legalMoves.insert(legalMoves.end(), pawnmoves.begin(), pawnmoves.end());
