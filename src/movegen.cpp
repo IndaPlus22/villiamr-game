@@ -66,7 +66,8 @@ Bitboard pawnAttacksWest (Bitboard pieces, Bitboard enemy) {
 
 void Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIGIN SQUARES ARE NOT CORRECT
     std::vector<Cmove> moves;
-    Bitboard pawms = pieceBitboards[sideToMove == WHITE ? wPAWN : bPAWN] ^ (pins & pieceBitboards[sideToMove == WHITE ? wPAWN : bPAWN]);
+    Bitboard pinns = (pins & pieceBitboards[sideToMove == WHITE ? wPAWN : bPAWN]);
+    Bitboard pawms = pieceBitboards[sideToMove == WHITE ? wPAWN : bPAWN] ^ pinns;
     Bitboard singlePush = 0;
     Bitboard dubblePush = 0;
     Bitboard attacksEast = 0;
@@ -779,6 +780,8 @@ void Position::getPinsAndChecks(){
         Bitboard pawnAttacks = pawnAttacksEast<BLACK>(king,oppawns) | pawnAttacksWest<BLACK>(king,oppawns);
         checks |= pawnAttacks;
     }
+
+    printBitboard(pins);
 }
 
 void Position::getAttackboard(){
@@ -795,20 +798,20 @@ void Position::getAttackboard(){
     while (opBishops){
         int square = std::countr_zero(opBishops);
         opBishops ^= (1ULL << square);
-        attackboard |= getBishopAttacks(square, allBitboard);
+        attackboard |= xrayBishopAttacks(square, allBitboard);
     }
 
     while (opRooks){
         int square = std::countr_zero(opRooks);
         opRooks ^= (1ULL << square);
-        attackboard |= getRookAttacks(square, allBitboard);
+        attackboard |= xrayRookAttacks(square, allBitboard);
     }
 
     while (opQueen){
         int square = std::countr_zero(opQueen);
         opQueen ^= (1ULL << square);
-        attackboard |= getBishopAttacks(square, allBitboard);
-        attackboard |= getRookAttacks(square, allBitboard);
+        attackboard |= xrayBishopAttacks(square, allBitboard);
+        attackboard |= xrayRookAttacks(square, allBitboard);
     }
 
     while (opknights){
