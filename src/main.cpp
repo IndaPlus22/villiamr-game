@@ -101,7 +101,7 @@ int main(){
                     movemade = true;
                 }
                 if(event.key.keysym.sym == SDLK_p){
-                    int depth = 6;
+                    int depth = 7;
                     std::cout << "*****Starting perft search at depth: " << depth << "*****" << std::endl;
                     std::cout << "Searching..." << std::endl;
 
