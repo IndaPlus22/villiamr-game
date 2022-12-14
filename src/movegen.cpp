@@ -37,6 +37,37 @@ Bitboard rayBetween(int square1, int square2){
     return between;
 }
 
+
+Bitboard extendedRayBetween(int square1, int square2){
+    Bitboard between = 0;
+    int x1 = square1 % 8;
+    int y1 = square1 / 8;
+    int x2 = square2 % 8;
+    int y2 = square2 / 8;
+
+    Bitboard files[] = {FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H};
+    Bitboard ranks[] = {RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8};
+
+    if (x1 == x2){ // ON THE SAME FILE
+        return files[x1];
+    }
+    else if (y1 == y2){ // ON THE SAME RANK
+        return ranks[y1];
+    }
+    if (!(abs(x1 - x2) == abs(y1 - y2))){ // NOT THE SAME DIAGONAL
+        return between;
+    }
+
+    int x = x2;
+    int y = y2;
+    for (int i = 1; x >= 0 && y >= 0 && x < 8 && y < 8; i++){ // MIGHT GIVE BUGS
+        between |= (1ULL << (y * 8 + x));
+        x = x1 < x2 ? x - 1 : x + 1;
+        y = y1 < y2 ? y - 1 : y + 1;
+    }
+    return between;
+}
+
 template <PieceColor color>
 Bitboard pawnSinglePush (Bitboard pieces, Bitboard occupied) {
     Bitboard moves = 0;
@@ -87,6 +118,28 @@ void Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIGIN SQUARES ARE
         attacksWest = pawnAttacksWest<BLACK>(pawms, colorBitboards[WHITE]);
     }
 
+    while (pinns){
+        int from = std::countr_zero(pinns);
+        pinns ^= 1ULL << from;
+        Bitboard piece = 1ULL << from;
+        Bitboard between = extendedRayBetween(from, std::countr_zero(pieceBitboards[sideToMove == WHITE ? wKING : bKING]));
+
+        if (sideToMove == WHITE){
+            singlePush |= pawnSinglePush<WHITE>(piece, allBitboard) & between;
+            dubblePush |= pawnSinglePush<WHITE>(pawnSinglePush<WHITE>(piece, allBitboard) & between, allBitboard) & between;
+            attacksEast |= pawnAttacksEast<WHITE>(piece, colorBitboards[BLACK]) & between;
+            attacksWest |= pawnAttacksWest<WHITE>(piece, colorBitboards[BLACK]) & between;
+        }
+        else{
+            singlePush |= pawnSinglePush<BLACK>(piece, allBitboard) & between;
+            dubblePush |= pawnSinglePush<BLACK>(pawnSinglePush<BLACK>(piece, allBitboard) & between, allBitboard) & between;
+            attacksEast |= pawnAttacksEast<BLACK>(piece, colorBitboards[WHITE]) & between;
+            attacksWest |= pawnAttacksWest<BLACK>(piece, colorBitboards[WHITE]) & between;
+        }
+    }
+    
+    
+
     Bitboard checkers = checks;
     while(checkers){
         int to = std::countr_zero(checkers);
@@ -96,6 +149,7 @@ void Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIGIN SQUARES ARE
         attacksEast &= rayBetween(to, std::countr_zero(pieceBitboards[sideToMove == WHITE ? wKING : bKING])) | (1ULL << to);
         attacksWest &= rayBetween(to, std::countr_zero(pieceBitboards[sideToMove == WHITE ? wKING : bKING])) | (1ULL << to);
     }
+
 
     if ( enPassantSquare != -1){ 
         Bitboard enPassant = 1ULL << enPassantSquare; 
@@ -130,9 +184,11 @@ void Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIGIN SQUARES ARE
     // Generate dubble push moves
     originSQ = 0;
     if (sideToMove == WHITE){ // NOTE: THIS WORKS
-        originSQ = (dubblePush << 16); // UGLY ASF but i have no time
+        dubblePush &= RANK_5;
+        originSQ = (dubblePush << 16); 
         originSQ &= RANK_7;
     }else {
+        dubblePush &= RANK_4;
         originSQ = (dubblePush >> 16);
         originSQ &= RANK_2;
     }
@@ -193,7 +249,7 @@ const Bitboard KNIGHT_ATTACKS[64] = {
 
 void Position::knightMoves(){
     std::vector<Cmove> moves;
-    Bitboard knights = pieceBitboards[sideToMove == WHITE ? wKNIGHT : bKNIGHT] ^ (pins & pieceBitboards[sideToMove == WHITE ? wKNIGHT : bKNIGHT]);
+    Bitboard knights = pieceBitboards[sideToMove == WHITE ? wKNIGHT : bKNIGHT] ^ (pins & pieceBitboards[sideToMove == WHITE ? wKNIGHT : bKNIGHT]); // Knights can never move along a pin
 
     // Generate moves for all knights
     while (knights){
@@ -590,7 +646,8 @@ Bitboard getRookAttacks(int square, Bitboard occupancy){
 }
 
 void Position::bishopMoves(){
-    Bitboard bishops = pieceBitboards[sideToMove == WHITE ? wBISHOP : bBISHOP] ^ (pins & pieceBitboards[sideToMove == WHITE ? wBISHOP : bBISHOP]);
+    Bitboard pinns = pins & pieceBitboards[sideToMove == WHITE ? wBISHOP : bBISHOP];
+    Bitboard bishops = pieceBitboards[sideToMove == WHITE ? wBISHOP : bBISHOP] ^ pinns;
     std::vector<Cmove> moves;
 
     while (bishops) {
@@ -611,12 +668,33 @@ void Position::bishopMoves(){
             moves.push_back(Cmove(square, to, getPiceceAtSquare(to) == NO_PIECE ? NORMAL : CAPTURE));
         }
     }
+
+    while (pinns) {
+        int square = std::countr_zero(pinns);
+        pinns ^= (1ULL << square);
+        Bitboard attacks = getBishopAttacks(square, allBitboard);
+        attacks &= ~colorBitboards[sideToMove];
+        attacks &= extendedRayBetween(square,std::countr_zero(pieceBitboards[sideToMove == WHITE ? wKING : bKING]));
+        Bitboard checkers = checks;
+        while(checkers){
+            int checkerto = std::countr_zero(checkers);
+            checkers ^= 1ULL << checkerto;
+            attacks &= rayBetween(checkerto,std::countr_zero(pieceBitboards[sideToMove == WHITE ? wKING : bKING])) | (1ULL << checkerto);
+        }
+        while (attacks) {
+            int to = std::countr_zero(attacks);
+            attacks ^= (1ULL << to);
+
+            moves.push_back(Cmove(square, to, getPiceceAtSquare(to) == NO_PIECE ? NORMAL : CAPTURE));
+        }
+    }
     
     legalMoves.insert(legalMoves.end(), moves.begin(), moves.end());
 }
 
 void Position::rookMoves(){
-    Bitboard rooks = pieceBitboards[sideToMove == WHITE ? wROOK : bROOK] ^ (pins & pieceBitboards[sideToMove == WHITE ? wROOK : bROOK]);
+    Bitboard pinns = pins & pieceBitboards[sideToMove == WHITE ? wROOK : bROOK];
+    Bitboard rooks = pieceBitboards[sideToMove == WHITE ? wROOK : bROOK] ^ pinns;
     std::vector<Cmove> moves;
 
     while (rooks) {
@@ -638,12 +716,34 @@ void Position::rookMoves(){
             moves.push_back(Cmove(square, to, getPiceceAtSquare(to) == NO_PIECE ? NORMAL : CAPTURE));
         }
     }
+
+    while (pinns){
+        int square = std::countr_zero(pinns);
+        pinns ^= (1ULL << square);
+        Bitboard attacks = getRookAttacks(square, allBitboard);
+        attacks &= ~colorBitboards[sideToMove];
+        attacks &= extendedRayBetween(square,std::countr_zero(pieceBitboards[sideToMove == WHITE ? wKING : bKING]));
+        Bitboard checkers = checks;
+        while(checkers){
+            int checkerto = std::countr_zero(checkers);
+            checkers ^= 1ULL << checkerto;
+            attacks &= rayBetween(checkerto,std::countr_zero(pieceBitboards[sideToMove == WHITE ? wKING : bKING])) | (1ULL << checkerto);
+        }
+        while (attacks) {
+            int to = std::countr_zero(attacks);
+            attacks ^= (1ULL << to);
+
+            moves.push_back(Cmove(square, to, getPiceceAtSquare(to) == NO_PIECE ? NORMAL : CAPTURE));
+        }
+    }
+    
     
     legalMoves.insert(legalMoves.end(), moves.begin(), moves.end());
 }
 
 void Position::queenMoves(){
-    Bitboard queen = pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN] ^ (pins & pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN]);
+    Bitboard pinns = pins & pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN];
+    Bitboard queen = pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN] ^ pinns;
     std::vector<Cmove> moves;
 
     while (queen) {
@@ -665,6 +765,27 @@ void Position::queenMoves(){
             moves.push_back(Cmove(square, to, getPiceceAtSquare(to) == NO_PIECE ? NORMAL : CAPTURE));
         }
     }
+
+    while (pinns){
+        int square = std::countr_zero(pinns);
+        pinns ^= (1ULL << square);
+        Bitboard attacks = getRookAttacks(square, allBitboard) | getBishopAttacks(square, allBitboard);
+        attacks &= ~colorBitboards[sideToMove];
+        attacks &= extendedRayBetween(square,std::countr_zero(pieceBitboards[sideToMove == WHITE ? wKING : bKING]));
+        Bitboard checkers = checks;
+        while(checkers){
+            int checkerto = std::countr_zero(checkers);
+            checkers ^= 1ULL << checkerto;
+            attacks &= rayBetween(checkerto,std::countr_zero(pieceBitboards[sideToMove == WHITE ? wKING : bKING])) | (1ULL << checkerto);
+        }
+        while (attacks) {
+            int to = std::countr_zero(attacks);
+            attacks ^= (1ULL << to);
+
+            moves.push_back(Cmove(square, to, getPiceceAtSquare(to) == NO_PIECE ? NORMAL : CAPTURE));
+        }
+    }
+    
     
     legalMoves.insert(legalMoves.end(), moves.begin(), moves.end());
 }
@@ -690,7 +811,7 @@ void Position::kingMoves(){
 
     Bitboard attacks = kingAttacks[square];
     attacks &= ~colorBitboards[sideToMove];
-    attacks &= ~attackboard;
+    attacks &= ~castleattackboard; // ATTCKS whithout xray
     
     while (attacks) {
         int to = std::countr_zero(attacks);
@@ -702,23 +823,23 @@ void Position::kingMoves(){
 
     if (sideToMove == WHITE) {
         if (castlingRights & (1 << WHITE_KINGSIDE)){
-            if (!(allBitboard & 0x6000000000000000) && !(attackboard & 0x6000000000000000)) {
+            if (!(allBitboard & 0x6000000000000000) && !(castleattackboard & 0x6000000000000000)) {
                 moves.push_back(Cmove(60, 62, CASTELING));
             }
         }
         if (castlingRights & (1 << WHITE_QUEENSIDE)){
-            if (!(allBitboard & 0xE00000000000000) && !(attackboard & 0xE00000000000000)) {
+            if (!(allBitboard & 0xE00000000000000) && !(castleattackboard & 0xC00000000000000)) {
                 moves.push_back(Cmove(60, 58, CASTELING));
             }
         }
     }else{
         if (castlingRights & (1 << BLACK_KINGSIDE)){
-            if (!(allBitboard & 0x60) && !(attackboard & 0x60)) {
+            if (!(allBitboard & 0x60) && !(castleattackboard & 0x60)) {
                 moves.push_back(Cmove(4, 6, CASTELING));
             }
         }
         if (castlingRights & (1 << BLACK_QUEENSIDE)){
-            if (!(allBitboard & 0xE) && !(attackboard & 0xE)) {
+            if (!(allBitboard & 0xE) && !(castleattackboard & 0xC)) {
                 moves.push_back(Cmove(4, 2, CASTELING));
             }
         }
@@ -760,7 +881,7 @@ void Position::getPinsAndChecks(){
         attackers ^= (1ULL << square);
         Bitboard between = rayBetween(square, std::countr_zero(king));
         if (between & colorBitboards[sideToMove]){
-            pins |= between & colorBitboards[sideToMove];
+            pins |= between;
         }else{
             checks |= (1ULL << square);
         }
@@ -781,11 +902,11 @@ void Position::getPinsAndChecks(){
         checks |= pawnAttacks;
     }
 
-    printBitboard(pins);
 }
 
 void Position::getAttackboard(){
     attackboard = 0;
+    castleattackboard = 0;
     Bitboard king = pieceBitboards[sideToMove == WHITE ? bKING : wKING];
     Bitboard opBishops = pieceBitboards[sideToMove == WHITE ? bBISHOP : wBISHOP];
     Bitboard opRooks = pieceBitboards[sideToMove == WHITE ? bROOK : wROOK];
@@ -794,26 +915,6 @@ void Position::getAttackboard(){
     Bitboard oppawns = pieceBitboards[sideToMove == WHITE ? bPAWN : wPAWN];
 
     attackboard |= kingAttacks[std::countr_zero(king)];
-
-    while (opBishops){
-        int square = std::countr_zero(opBishops);
-        opBishops ^= (1ULL << square);
-        attackboard |= xrayBishopAttacks(square, allBitboard);
-    }
-
-    while (opRooks){
-        int square = std::countr_zero(opRooks);
-        opRooks ^= (1ULL << square);
-        attackboard |= xrayRookAttacks(square, allBitboard);
-    }
-
-    while (opQueen){
-        int square = std::countr_zero(opQueen);
-        opQueen ^= (1ULL << square);
-        attackboard |= xrayBishopAttacks(square, allBitboard);
-        attackboard |= xrayRookAttacks(square, allBitboard);
-    }
-
     while (opknights){
         int square = std::countr_zero(opknights);
         opknights ^= (1ULL << square);
@@ -826,7 +927,32 @@ void Position::getAttackboard(){
         attackboard |= pawnAttacksEast<WHITE>(oppawns,colorBitboards[sideToMove]) | pawnAttacksWest<WHITE>(oppawns,colorBitboards[sideToMove]);
     } 
 
-    //attackboard &= ~colorBitboards[!sideToMove];
+    castleattackboard = attackboard;
+
+    while (opBishops){
+        int square = std::countr_zero(opBishops);
+        opBishops ^= (1ULL << square);
+        attackboard |= xrayBishopAttacks(square, allBitboard);
+        castleattackboard |= getBishopAttacks(square, allBitboard);
+    }
+
+    while (opRooks){
+        int square = std::countr_zero(opRooks);
+        opRooks ^= (1ULL << square);
+        attackboard |= xrayRookAttacks(square, allBitboard);
+        castleattackboard |= getRookAttacks(square, allBitboard);
+    }
+
+    while (opQueen){
+        int square = std::countr_zero(opQueen);
+        opQueen ^= (1ULL << square);
+        attackboard |= xrayBishopAttacks(square, allBitboard);
+        attackboard |= xrayRookAttacks(square, allBitboard);
+        castleattackboard |= getBishopAttacks(square, allBitboard);
+        castleattackboard |= getRookAttacks(square, allBitboard);
+    }
+
+
 }
 
 

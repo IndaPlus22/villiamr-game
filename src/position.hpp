@@ -42,6 +42,7 @@ class Position {
         Bitboard colorBitboards[2];
         Bitboard allBitboard;
         Bitboard attackboard; 
+        Bitboard castleattackboard;
         Bitboard pins;
         Bitboard checks;
 

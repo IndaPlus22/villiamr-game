@@ -35,7 +35,7 @@ int main(){
     SDL_Window* window = SDL_CreateWindow("Chess", 100, 100, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     GraphicsBase graphicsBase(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
-    Position position("r6r/1b2k1bq/8/8/7B/8/8/R3K2R w KQkq - 0 1"); // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    Position position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 
     bool quit = false;
