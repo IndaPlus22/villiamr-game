@@ -12,13 +12,15 @@
 #define SCREEN_HEIGHT 1000
 
 int getSquare (int x, int y){
-    return (x / 125) + (y / 125) * 8;
+    return (x / (SCREEN_WIDTH / 8)) + (y / (SCREEN_HEIGHT / 8)) * 8;
 }
+
 
 Bitboard perft(int depth, Position position){
     if (depth == 0){
         return 1;
     }
+
     Bitboard nodes = 0;
     position.generateLegalMoves();
     std::vector<Cmove> moves = position.getLegalMoves();
@@ -99,12 +101,16 @@ int main(){
                     movemade = true;
                 }
                 if(event.key.keysym.sym == SDLK_p){
-                    // TIME EXECUTION OF PERFT
+                    int depth = 6;
+                    std::cout << "*****Starting perft search at depth: " << depth << "*****" << std::endl;
+                    std::cout << "Searching..." << std::endl;
+
                     auto start = std::chrono::high_resolution_clock::now();
-                    int nodes = perft(5, position);
+                    Bitboard nodes = perft(depth, position);
                     auto end = std::chrono::high_resolution_clock::now();
                     std::chrono::duration<double> elapsed = end - start;
 
+                    std::cout << "\33[A\33[2K\33[A\33[2K\r*****Perft search complete*****" << std::endl; 
                     std::cout << "Nodes searched: "<< nodes << std::endl;
                     std::cout << "Time: " << elapsed.count() << std::endl;
                     std::cout << "Nodes per second: " << nodes / elapsed.count() << std::endl;
