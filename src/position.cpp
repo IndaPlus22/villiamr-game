@@ -136,6 +136,10 @@ void Position::initPosition(std::string fen) {
         }
     }
 
+    for (PieceType p = wPAWN; p < NO_PIECE; p++) {
+        this->originalPieceBitboards[p] = this->pieceBitboards[p];
+    }
+
 }
 
 

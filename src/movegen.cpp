@@ -150,7 +150,7 @@ void Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIGIN SQUARES ARE
         attacksWest &= rayBetween(to, std::countr_zero(pieceBitboards[sideToMove == WHITE ? wKING : bKING])) | (1ULL << to);
     }
 
-
+    /*
     if ( enPassantSquare != -1){ 
         Bitboard enPassant = 1ULL << enPassantSquare; 
         if ( getPiceceAtSquare(enPassantSquare + 7) == wPAWN || getPiceceAtSquare(enPassantSquare - 7) == bPAWN){
@@ -160,7 +160,7 @@ void Position::pawnMoves(){ //TODO : FUNCTION IS NOT FINISHED ORIGIN SQUARES ARE
             moves.push_back(Cmove(sideToMove == WHITE ? enPassantSquare + 9 : enPassantSquare - 9, enPassantSquare, EN_PASSANT));
         }
     }
-
+    */
 
 
     Bitboard originSQ = 0;
@@ -951,8 +951,6 @@ void Position::getAttackboard(){
         castleattackboard |= getBishopAttacks(square, allBitboard);
         castleattackboard |= getRookAttacks(square, allBitboard);
     }
-
-
 }
 
 
@@ -968,8 +966,6 @@ void Position::generateLegalMoves(){
         this->allBitboard |= this->pieceBitboards[i];
         this->allBitboard |= this->pieceBitboards[i + 6];
     }
-
-    std::thread threads[6]; 
     
 
     legalMoves.clear();

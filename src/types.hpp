@@ -37,6 +37,7 @@ typedef enum CastelingRights {
 */
 class Cmove {
 public:
+        Cmove() = default;
         Cmove(int from, int to, MoveType type) {move = (from | (to << 6) | (type << 12));};
 
         Move getFrom()                          const {return move & 0x3F;};
@@ -52,8 +53,8 @@ public:
         void setCapturedPiece(PieceType piece)                  {capturedPiece = piece;};
         void setRemovedCastelingRights(CastelingRights rights)  {removedCastelingRights |= (0x01 << rights);};
 
-        void operator=(const Cmove& other)                      {move = other.move;};
-        bool operator==(const Cmove& other)     const {return move == other.move;};
+        void operator=(const Cmove& other)                      {move = other.move;capturedPiece = other.capturedPiece;removedCastelingRights = other.removedCastelingRights;};
+        bool operator==(const Cmove& other)     const           {return move == other.move;};
 
 private:
         Move move;

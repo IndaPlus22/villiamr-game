@@ -7,6 +7,7 @@
 
 #include "graphicsBase.hpp"
 #include "position.hpp"
+#include "Engine.hpp"
 
 #define SCREEN_WIDTH 1000
 #define SCREEN_HEIGHT 1000
@@ -38,6 +39,7 @@ int main(){
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     GraphicsBase graphicsBase(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
     Position position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    Engine engine(BLACK, 5);
 
 
     bool quit = false;
@@ -56,6 +58,16 @@ int main(){
                 quit = true;
             }
             movemade = false;
+            if (position.getSideToMove() == BLACK){
+                engine.findBestMove(position);
+                position.makeMove(engine.getEngineMove());
+                movemade = true;
+                SDL_RenderClear(renderer);
+                graphicsBase.drawPosition(position);
+                SDL_RenderPresent(renderer);
+                position.generateLegalMoves();
+                moves = position.getLegalMoves();
+            }
         }
         while (SDL_PollEvent(&event)){
             if (event.type == SDL_QUIT){
@@ -101,7 +113,7 @@ int main(){
                     movemade = true;
                 }
                 if(event.key.keysym.sym == SDLK_p){
-                    int depth = 7;
+                    int depth = 5;
                     std::cout << "*****Starting perft search at depth: " << depth << "*****" << std::endl;
                     std::cout << "Searching..." << std::endl;
 

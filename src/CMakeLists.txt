@@ -3,8 +3,8 @@ include(FindPkgConfig)
 PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
 PKG_SEARCH_MODULE(SDL2_IMAGE REQUIRED SDL2_image)
 
-set(SOURCES main.cpp graphicsBase.cpp position.cpp types.cpp movegen.cpp)
-set(HEADERS graphicsBase.hpp types.hpp position.hpp)
+set(SOURCES main.cpp graphicsBase.cpp position.cpp types.cpp movegen.cpp Engine.cpp)
+set(HEADERS graphicsBase.hpp types.hpp position.hpp Engine.hpp)
 add_executable( ${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++2a")

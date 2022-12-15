@@ -21,8 +21,12 @@ class Position {
         Bitboard getAllBitboard() {return allBitboard;};
         Bitboard getColorBitboard(PieceColor color) {return colorBitboards[color];};
         Bitboard getPieceBitboard(PieceType piecetype) {return pieceBitboards[piecetype];};
+        Bitboard getOriginalBitboard(PieceType piecetype) {return originalPieceBitboards[piecetype];};
+        Bitboard returnAttackboard() {return attackboard;}; // F*ed up name wellp
         int getEnPassantSquare() {return enPassantSquare;};
         uint8_t getCastelingRights() {return castlingRights;};
+
+        void setSideToMove(PieceColor color) {sideToMove = color;};
 
         // TESTING FUNCTIONS
         void printBitboard(PieceType board); 
@@ -39,6 +43,7 @@ class Position {
 
     private:
         Bitboard pieceBitboards[12];
+        Bitboard originalPieceBitboards[12];
         Bitboard colorBitboards[2];
         Bitboard allBitboard;
         Bitboard attackboard; 
