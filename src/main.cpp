@@ -60,6 +60,7 @@ int main(){
             movemade = false;
             if (position.getSideToMove() == BLACK){
                 engine.findBestMove(position);
+                std::cout << engine.getEngineMove().getFrom() << " " << engine.getEngineMove().getTo() << std::endl;
                 position.makeMove(engine.getEngineMove());
                 movemade = true;
                 SDL_RenderClear(renderer);

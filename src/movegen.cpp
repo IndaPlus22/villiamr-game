@@ -820,6 +820,10 @@ void Position::kingMoves(){
         moves.push_back(Cmove(square, to, getPiceceAtSquare(to) == NO_PIECE ? NORMAL : CAPTURE));
     }
     
+    if(checks){
+        legalMoves.insert(legalMoves.end(), moves.begin(), moves.end());
+        return;
+    }
 
     if (sideToMove == WHITE) {
         if (castlingRights & (1 << WHITE_KINGSIDE)){

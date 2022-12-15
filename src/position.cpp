@@ -214,6 +214,19 @@ void Position::makeMove(Cmove move) { // TODO: UPDATE CASTLING RIGHTS FOR ROOK M
         move.setRemovedCastelingRights(BLACK_KINGSIDE);
     }
 
+    if (piece == wKING && type != CASTELING){
+        castlingRights &= ~(0x01 << WHITE_KINGSIDE);
+        castlingRights &= ~(0x01 << WHITE_QUEENSIDE);
+        move.setRemovedCastelingRights(WHITE_KINGSIDE);
+        move.setRemovedCastelingRights(WHITE_QUEENSIDE);
+    }
+    else if (piece == bKING && type != CASTELING){
+        castlingRights &= ~(0x01 << BLACK_KINGSIDE);
+        castlingRights &= ~(0x01 << BLACK_QUEENSIDE);
+        move.setRemovedCastelingRights(BLACK_KINGSIDE);
+        move.setRemovedCastelingRights(BLACK_QUEENSIDE);
+    }
+
     // En_Passant square handeling
     if (piece == wPAWN || piece == bPAWN){
         if (piece == wPAWN && (RANK_7 & (1ULL << move.getFrom())) != 0 && (RANK_5 & (1ULL << move.getTo())) != 0){
