@@ -51,6 +51,8 @@ class Position {
         Bitboard getAllPiecesBitboard (Color color) const { return this->allPieces[color]; };
         Bitboard getOccupiedSquaresBitboard () const { return this->occupiedSquares; };
 
+        Bitboard getEnpassantSquare () const { return this->enPassantSquare; };
+
         Color getSideToMove () const { return sideToMove; };
 
         constexpr PieceType getPieceType (Square square) const { // This function being constexpr speeds upp program at runtime but kills compile which we don't care about

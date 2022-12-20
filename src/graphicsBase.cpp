@@ -28,7 +28,7 @@ GraphicsBase::GraphicsBase(int width, int height) {
     }
 
     // LOAD PIECES
-    std::string piecePaths[12] = {"Wpawn.png", "Wbishop.png", "Wknight.png", "Wrook.png", "Wqueen.png", "Wking.png", "Bpawn.png", "Bbishop.png", "Bknight.png", "Brook.png", "Bqueen.png", "Bking.png"};
+    std::string piecePaths[12] = {"Wpawn.png", "Wknight.png", "Wbishop.png", "Wrook.png", "Wqueen.png", "Wking.png", "Bpawn.png", "Bknight.png", "Bbishop.png", "Brook.png", "Bqueen.png", "Bking.png"};
     for (PieceType i = wPAWN; i < NO_PIECE; i++) {
         std::cout << "[\33[1;32mLoading\33[0m] " << piecePaths[i] << std::endl;
         this->PieceTextures[i] = IMG_LoadTexture(renderer, (assetsPath + piecePaths[i]).c_str());

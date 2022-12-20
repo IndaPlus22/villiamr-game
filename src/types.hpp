@@ -95,6 +95,10 @@ constexpr move encodeMove(Square from, Square to, MoveType moveType) {
     return from | (to << 6) | (moveType << 12);
 }
 
+constexpr move encodeMove(int from,int to,MoveType moveType) {
+    return from | (to << 6) | (moveType << 12);
+}
+
 constexpr Square getFromSquare(move m) {
     return static_cast<Square>(m & 0x3F);
 }

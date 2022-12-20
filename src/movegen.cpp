@@ -209,7 +209,30 @@ const Bitboard extendedRayBetween[64][64] = {
     * Also always need to check for pinned pieces and if they are allowed to move inline with the pin
 */
 
-void generatePawnMoves(std::vector<move> &movelist, Position position) {
+void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard pinns, Bitboard checkers) {
+    Color sideToMove = position.getSideToMove();
+    Bitboard pawns = position.getPieceBitboard(sideToMove == WHITE ? wPAWN : bPAWN);
+    Bitboard enemy = position.getAllPiecesBitboard(sideToMove == WHITE ? BLACK : WHITE);
+    Bitboard occupied = position.getOccupiedSquaresBitboard();
+
+    Bitboard single = sideToMove == WHITE ? pawnSinglePush<WHITE>(pawns, occupied) : pawnSinglePush<BLACK>(pawns, occupied);
+    Bitboard doublePush = sideToMove == WHITE ? pawnDoublePush<WHITE>(pawns, occupied) : pawnDoublePush<BLACK>(pawns, occupied);
+    Bitboard east = sideToMove == WHITE ? pawnEastAttacks<WHITE>(pawns,enemy) : pawnEastAttacks<BLACK>(pawns,enemy);
+    Bitboard west = sideToMove == WHITE ? pawnWestAttacks<WHITE>(pawns,enemy) : pawnWestAttacks<BLACK>(pawns,enemy);
+
+    Bitboard origins = 0;
+
+
+    origins = sideToMove == WHITE ? (single << 8) : (single >> 8);
+    while (origins && single) {
+        int origin = std::countr_zero(origins);
+        int target = std::countr_zero(single);
+        origins ^= (1ULL << origin);
+        single ^= (1ULL << target);
+        movelist.push_back(encodeMove(origin, target, sideToMove == WHITE ? (target < 8 ? PROMOTON : QUIET) : (target > 55 ? PROMOTON : QUIET)));
+    }
+
+
     
 }
 
