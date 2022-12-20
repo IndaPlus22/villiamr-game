@@ -355,6 +355,7 @@ void Position::undoMove(){
     else {
         makeMove(state.lastMove); // Any non capure or promotion move can be undone by making the move again
         sideToMove = sideToMove == WHITE ? BLACK : WHITE; // Ugly but making the move again will change the side to move so we need to change it back beore changeing it again
+        stateHistory.pop_back(); // Remove the state that was created by the makeMove() call
     }
 
     sideToMove = sideToMove == WHITE ? BLACK : WHITE;

@@ -19,7 +19,7 @@ typedef struct stateInfo {
     uint8_t castlingRights;
 
     bool operator==(const stateInfo& other) const {
-        return lastMove == other.lastMove && capturedPiece == other.capturedPiece && fiftyMoveCounter == other.fiftyMoveCounter && repetitionCounter == other.repetitionCounter && enPassantSquare == other.enPassantSquare && castlingRights == other.castlingRights;
+        return lastMove == other.lastMove;
     }
 }StateInfo;
 
@@ -52,7 +52,7 @@ class Position {
         Bitboard getOccupiedSquaresBitboard () const { return occupiedSquares; };
 
 
-        constexpr PieceType getPieceType (Square square) const {
+        constexpr PieceType getPieceType (Square square) const { // This function being constexpr speeds upp program at runtime but kills compile which we don't care about
             for (PieceType i = wPAWN; i < NO_PIECE; i++){
                 if (pieces[i] & (1ULL << square)){
                     return i;

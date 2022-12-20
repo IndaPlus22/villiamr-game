@@ -3,8 +3,8 @@ include(FindPkgConfig)
 PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
 PKG_SEARCH_MODULE(SDL2_IMAGE REQUIRED SDL2_image)
 
-set(SOURCES main.cpp position.cpp )
-set(HEADERS types.hpp position.hpp)
+set(SOURCES main.cpp position.cpp graphicsBase.cpp)
+set(HEADERS types.hpp position.hpp graphicsBase.hpp)
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 
