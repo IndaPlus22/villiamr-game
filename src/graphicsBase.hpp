@@ -12,6 +12,8 @@ public:
     ~GraphicsBase() = default;
 
     void drawBoard(Position position, std::vector<int> highlightedSquares);
+    
+    void close() { SDL_DestroyRenderer(renderer); SDL_DestroyWindow(window); SDL_Quit();} 
 
 private:
     SDL_Window* window;

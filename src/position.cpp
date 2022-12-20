@@ -319,7 +319,11 @@ void Position::undoMove(){
     // Update side to move
     sideToMove = sideToMove == WHITE ? BLACK : WHITE;
 
-    if (moveType == CAPTURE){
+    if (moveType == QUIET || moveType == DOUBLE_PAWN_PUSH){
+        pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
+    }
+
+    else if (moveType == CAPTURE){
         pieces[capturedPiece] |= (1ULL << toSquare);
         pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
     }
@@ -352,8 +356,8 @@ void Position::undoMove(){
         }
     }
     
-    else {
-        makeMove(state.lastMove); // Any non capure or promotion move can be undone by making the move again
+    else { // CASTLING
+        makeMove(state.lastMove); // Castling is a special case where we need to make the move again to undo it
         sideToMove = sideToMove == WHITE ? BLACK : WHITE; // Ugly but making the move again will change the side to move so we need to change it back beore changeing it again
         stateHistory.pop_back(); // Remove the state that was created by the makeMove() call
     }
