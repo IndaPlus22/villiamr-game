@@ -1,80 +1,70 @@
-#ifndef POSITION
-#define POSITION
+#ifndef POSITION_HPP
+#define POSITION_HPP
 
-#include <string>
 #include <vector>
 #include <iostream>
-#include <bit>
-#include <thread>
-#include <mutex>
 #include "types.hpp"
 
+
+/*
+    *  The stateInfo struct is used to store information about the board, needed to undo moves.
+*/
+typedef struct stateInfo {
+    move lastMove;
+    PieceType capturedPiece;
+
+    int fiftyMoveCounter;
+    int repetitionCounter;
+    Bitboard enPassantSquare;
+    uint8_t castlingRights;
+
+    bool operator==(const stateInfo& other) const {
+        return lastMove == other.lastMove && capturedPiece == other.capturedPiece && fiftyMoveCounter == other.fiftyMoveCounter && repetitionCounter == other.repetitionCounter && enPassantSquare == other.enPassantSquare && castlingRights == other.castlingRights;
+    }
+}StateInfo;
+
 class Position {
+    private:
+        Bitboard pieces[12];
+        Bitboard allPieces[2];
+        Bitboard occupiedSquares;
+
+        Color sideToMove;
+        uint8_t castlingRights;
+        Bitboard enPassantSquare;
+
+        int fiftyMoveCounter;
+        int repetitionCounter;
+
+        std::vector<StateInfo> stateHistory;
+
+
     public:
         Position(std::string fen);
-        //~Position();
+        ~Position() = default;
 
-        // GETTERS AND SETTERS
-        Bitboard getBitboard(PieceType piecetype) {return pieceBitboards[piecetype];};
-        std::vector<Cmove> getLegalMoves() {return legalMoves;};
-        PieceColor getSideToMove() {return sideToMove;};
-        Bitboard getAllBitboard() {return allBitboard;};
-        Bitboard getColorBitboard(PieceColor color) {return colorBitboards[color];};
-        Bitboard getPieceBitboard(PieceType piecetype) {return pieceBitboards[piecetype];};
-        Bitboard getOriginalBitboard(PieceType piecetype) {return originalPieceBitboards[piecetype];};
-        Bitboard returnAttackboard() {return attackboard;}; // F*ed up name wellp
-        int getEnPassantSquare() {return enPassantSquare;};
-        uint8_t getCastelingRights() {return castlingRights;};
-
-        void setSideToMove(PieceColor color) {sideToMove = color;};
-
-        // TESTING FUNCTIONS
-        void printBitboard(PieceType board); 
-        void printBitboard(PieceColor color);
-        void printBitboard(Bitboard board);
-        void printBitboard();
+        void makeMove(move m);
+        void undoMove();
 
 
-        // MOVE FUNCTIONS
-        void generateLegalMoves();
-        void makeMove(Cmove move);
-        void unmakeMove();
+        Bitboard getPieceBitboard (PieceType piece) const { return pieces[piece]; };
+        Bitboard getAllPiecesBitboard (Color color) const { return allPieces[color]; };
+        Bitboard getOccupiedSquaresBitboard () const { return occupiedSquares; };
 
 
-    private:
-        Bitboard pieceBitboards[12];
-        Bitboard originalPieceBitboards[12];
-        Bitboard colorBitboards[2];
-        Bitboard allBitboard;
-        Bitboard attackboard; 
-        Bitboard castleattackboard;
-        Bitboard pins;
-        Bitboard checks;
+        constexpr PieceType getPieceType (Square square) const {
+            for (PieceType i = wPAWN; i < NO_PIECE; i++){
+                if (pieces[i] & (1ULL << square)){
+                    return i;
+                }
+            }
+            return NO_PIECE;
+        };
 
-        PieceColor sideToMove;
-        uint8_t castlingRights;
-        int enPassantSquare;
 
-        std::vector<Cmove> legalMoves;
-        std::vector<Cmove> moveLog;
-
-        void getPinsAndChecks();
-        void getAttackboard();
-
-        void pawnMoves();
-        void knightMoves();
-        void bishopMoves();
-        void rookMoves();
-        void queenMoves();
-        void kingMoves();
-
-        void initPosition(std::string fen);
-        void initSlidersAttacks(bool is_bishop);
-
-        PieceType getPiceceAtSquare(int square);
-        
+        void printBoard(Bitboard board);
+        void printEnPassantBoard();
 };
-
 
 
 #endif

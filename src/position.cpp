@@ -1,95 +1,76 @@
 #include "position.hpp"
 
 
+
+/*
+    Position constructor intitializes boardstate from a FEN string.
+*/
 Position::Position(std::string fen) {
-    this->initPosition(fen);
-    this->allBitboard = 0;
-    this->colorBitboards[WHITE] = 0;
-    this->colorBitboards[BLACK] = 0; 
-    this->enPassantSquare = -1;
-    this->attackboard = 0;
-    for (PieceType i = wPAWN; i < bPAWN; i++) {
-        this->colorBitboards[WHITE] |= this->pieceBitboards[i];
-        this->colorBitboards[BLACK] |= this->pieceBitboards[i + 6];
-        this->allBitboard |= this->pieceBitboards[i];
-        this->allBitboard |= this->pieceBitboards[i + 6];
+    // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" DEFAULT FEN
+
+    // Set all pieces to 0
+    for (PieceType i = wPAWN; i < NO_PIECE; i++){
+        this->pieces[i] = 0;
     }
-    initSlidersAttacks(true); // INTIalize bishop attacks tables
-    initSlidersAttacks(false);  // Rook
-}
+    this->allPieces[WHITE] = 0;
+    this->allPieces[BLACK] = 0;
+    this->occupiedSquares = 0;
 
-void Position::initPosition(std::string fen) {
-    // Handels the piece positions, side to move and castling rights but not en passant square and the other stuff cuz that would suck and I don't care
+    int placementEnd = fen.find(' ');
+    std::string placement = fen.substr(0, placementEnd);
 
-    int stringIndex = 0;
-    int square = 0;
-    bool positionInit = true;
-
-    for (PieceType i = wPAWN; i < NO_PIECE; i++) {
-        this->pieceBitboards[i] = 0;
-    }
-
-
-    for (char c: fen) {
-        if (!positionInit) 
-            break;
-        stringIndex++;
-
+    int placementIndex = 0;
+    for (char c: placement){
         switch (c){
-        case 'r':                                                
-            pieceBitboards[bROOK] |= (1ULL << square);           
-            square++;                                            
-            break;                                               
+        case 'p':
+            pieces[bPAWN] |= (1ULL << placementIndex);
+            placementIndex++;
+            break;
         case 'n':
-            pieceBitboards[bKNIGHT] |= (1ULL << square);
-            square++;
+            pieces[bKNIGHT] |= (1ULL << placementIndex);
+            placementIndex++;
             break;
         case 'b':
-            pieceBitboards[bBISHOP] |= (1ULL << square);
-            square++;
+            pieces[bBISHOP] |= (1ULL << placementIndex);
+            placementIndex++;
+            break;
+        case 'r':
+            pieces[bROOK] |= (1ULL << placementIndex);
+            placementIndex++;
             break;
         case 'q':
-            pieceBitboards[bQUEEN] |= (1ULL << square);
-            square++;
+            pieces[bQUEEN] |= (1ULL << placementIndex);
+            placementIndex++;
             break;
         case 'k':
-            pieceBitboards[bKING] |= (1ULL << square);
-            square++;
+            pieces[bKING] |= (1ULL << placementIndex);
+            placementIndex++;
             break;
-        case 'p':
-            pieceBitboards[bPAWN] |= (1ULL << square);
-            square++;
-            break;
-
-        case 'R':
-            pieceBitboards[wROOK] |= (1ULL << square);
-            square++;
+        case 'P':   
+            pieces[wPAWN] |= (1ULL << placementIndex);
+            placementIndex++;
             break;
         case 'N':
-            pieceBitboards[wKNIGHT] |= (1ULL << square);
-            square++;
+            pieces[wKNIGHT] |= (1ULL << placementIndex);
+            placementIndex++;
             break;
         case 'B':
-            pieceBitboards[wBISHOP] |= (1ULL << square);
-            square++;
+            pieces[wBISHOP] |= (1ULL << placementIndex);
+            placementIndex++;
+            break;
+        case 'R':
+            pieces[wROOK] |= (1ULL << placementIndex);
+            placementIndex++;
             break;
         case 'Q':
-            pieceBitboards[wQUEEN] |= (1ULL << square);
-            square++;
+            pieces[wQUEEN] |= (1ULL << placementIndex);
+            placementIndex++;
             break;
-        case 'K':  
-            pieceBitboards[wKING] |= (1ULL << square);
-            square++;
+        case 'K':
+            pieces[wKING] |= (1ULL << placementIndex);
+            placementIndex++;
             break;
-        case 'P':
-            pieceBitboards[wPAWN] |= (1ULL << square);
-            square++;
-            break;
-
         case '/':
-            break;
-        case ' ':
-            positionInit = false;
             break;
 
         case '1':
@@ -100,290 +81,282 @@ void Position::initPosition(std::string fen) {
         case '6':
         case '7':
         case '8':
-            square += c - '0';
+            placementIndex += c - '0';
             break;
-
-
+        
         default:
+            std::cout << "Invalid FEN string" << std::endl;
+            exit(EXIT_FAILURE);
             break;
         }
     }
 
-    if (fen[stringIndex] == 'w') {
-        sideToMove = WHITE;
-    } else {
-        sideToMove = BLACK;
-    }
-    stringIndex += 2;
+    // Set all pieces
+    allPieces[WHITE] = pieces[wPAWN] | pieces[wKNIGHT] | pieces[wBISHOP] | pieces[wROOK] | pieces[wQUEEN] | pieces[wKING];
+    allPieces[BLACK] = pieces[bPAWN] | pieces[bKNIGHT] | pieces[bBISHOP] | pieces[bROOK] | pieces[bQUEEN] | pieces[bKING];
+    occupiedSquares = allPieces[WHITE] | allPieces[BLACK];
 
-    castlingRights = 0;
-    for (char c: fen.substr(stringIndex, 4)) {
-        switch (c) {
+    // Set side to move
+    if ( fen[placementEnd + 1] == 'w' ){
+        sideToMove = WHITE;
+    } else if ( fen[placementEnd + 1] == 'b' ){
+        sideToMove = BLACK;
+    } else {
+        std::cout << "Invalid FEN string" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    // Set castling rights
+    int castlingRightsBegin = placementEnd + 3;
+    int castlingRightsEnd = fen.find(' ', castlingRightsBegin);
+    std::string castlingRightsString = fen.substr(castlingRightsBegin, castlingRightsEnd - castlingRightsBegin);
+    for (char c: castlingRightsString){
+        switch (c){
         case 'K':
-            castlingRights |= (0x01 << WHITE_KINGSIDE);
+            castlingRights |= WHITE_OO;
             break;
         case 'Q':
-            castlingRights |= (0x01 << WHITE_QUEENSIDE);
+            castlingRights |= WHITE_OOO;
             break;
         case 'k':
-            castlingRights |= (0x01 << BLACK_KINGSIDE);
+            castlingRights |= BLACK_OO;
             break;
         case 'q':
-            castlingRights |= (0x01 << BLACK_QUEENSIDE);
+            castlingRights |= BLACK_OOO;
+            break;
+        case '-':
             break;
         default:
+            std::cout << "Invalid FEN string" << std::endl;
+            exit(EXIT_FAILURE);
             break;
         }
     }
 
-    for (PieceType p = wPAWN; p < NO_PIECE; p++) {
-        this->originalPieceBitboards[p] = this->pieceBitboards[p];
+    // Set en passant square
+    int enPassantSquareBegin = castlingRightsEnd + 1;
+    int enPassantSquareEnd = fen.find(' ', enPassantSquareBegin);
+    std::string enPassantSquareString = fen.substr(enPassantSquareBegin, enPassantSquareEnd - enPassantSquareBegin);
+    if (enPassantSquareString == "-"){
+        enPassantSquare = 0;
+    } else {
+        try {
+            enPassantSquare = (1ULL << squareString.at(enPassantSquareString));
+        } catch (const std::out_of_range& oor) {
+            std::cout << "Invalid FEN string" << std::endl;
+            exit(EXIT_FAILURE);
+        }
     }
 
+    // Set fiftymovecounter clock
+    int halfmoveClockBegin = enPassantSquareEnd + 1;
+    int halfmoveClockEnd = fen.find(' ', halfmoveClockBegin);
+    std::string halfmoveClockString = fen.substr(halfmoveClockBegin, halfmoveClockEnd - halfmoveClockBegin);
+    this->fiftyMoveCounter = std::stoi(halfmoveClockString);
+
+    this->repetitionCounter = 0;
 }
 
-
-void Position::printBitboard(PieceType board){
+void Position::printBoard(Bitboard board){
     for (int i = 0; i < 64; i++){
-        if (i % 8 == 0)
-            std::cout << std::endl;
-        if (pieceBitboards[board] & (1ULL << i))
-            std::cout << "1";
-        else
-            std::cout << "0";
-    }
-    std::cout << std::endl;
-}
-
-void Position::printBitboard (){
-    for (int i = 0; i < 64; i++){
-        if (i % 8 == 0)
-            std::cout << std::endl;
-        if (allBitboard & (1ULL << i))
-            std::cout << "1";
-        else
-            std::cout << "0";
-    }
-    std::cout << std::endl;
-}
-
-void Position::printBitboard(Bitboard board){
-    for (int i = 0; i < 8; i++){
-        for (int j = 0; j < 8; j++){
-            std::cout << ((board >> (i*8 + j)) & 1);
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
-}
-
-void Position::printBitboard(PieceColor color){
-    for (int i = 0; i < 64; i++){
-        if (i % 8 == 0)
-            std::cout << std::endl;
-        if (colorBitboards[color] & (1ULL << i))
-            std::cout << "1";
-        else
-            std::cout << "0";
-    }
-    std::cout << std::endl;
-}
-
-// DOES NOT HANDLE MOVE VALIDITY
-void Position::makeMove(Cmove move) { // TODO: UPDATE CASTLING RIGHTS FOR ROOK MOVES
-    MoveType type = move.getType();
-    PieceType captured = type == CAPTURE || type == PROMOTION_CAPTURE ? getPiceceAtSquare(move.getTo()) : NO_PIECE;
-    PieceType piece = getPiceceAtSquare(move.getFrom());
-    move.setCapturedPiece(captured);
-
-     // Update castling rights
-    if (piece == wROOK && castlingRights & (0x01 << WHITE_QUEENSIDE) && move.getFrom() == 56) {     
-        castlingRights &= ~(0x01 << WHITE_QUEENSIDE); 
-        move.setRemovedCastelingRights(WHITE_QUEENSIDE);
-    }
-    else if (piece == wROOK && castlingRights & (0x01 << WHITE_KINGSIDE) && move.getFrom() == 63){
-        castlingRights &= ~(0x01 << WHITE_KINGSIDE);
-        move.setRemovedCastelingRights(WHITE_KINGSIDE);
-    }
-    else if (piece == bROOK && castlingRights & (0x01 << BLACK_QUEENSIDE) && move.getFrom() == 0){
-        castlingRights &= ~(0x01 << BLACK_QUEENSIDE);
-        move.setRemovedCastelingRights(BLACK_QUEENSIDE);
-    }
-    else if (piece == bROOK && castlingRights & (0x01 << BLACK_KINGSIDE) && move.getFrom() == 7){
-        castlingRights &= ~(0x01 << BLACK_KINGSIDE);
-        move.setRemovedCastelingRights(BLACK_KINGSIDE);
-    }
-
-    if (piece == wKING && type != CASTELING){
-        castlingRights &= ~(0x01 << WHITE_KINGSIDE);
-        castlingRights &= ~(0x01 << WHITE_QUEENSIDE);
-        move.setRemovedCastelingRights(WHITE_KINGSIDE);
-        move.setRemovedCastelingRights(WHITE_QUEENSIDE);
-    }
-    else if (piece == bKING && type != CASTELING){
-        castlingRights &= ~(0x01 << BLACK_KINGSIDE);
-        castlingRights &= ~(0x01 << BLACK_QUEENSIDE);
-        move.setRemovedCastelingRights(BLACK_KINGSIDE);
-        move.setRemovedCastelingRights(BLACK_QUEENSIDE);
-    }
-
-    // En_Passant square handeling
-    if (piece == wPAWN || piece == bPAWN){
-        if (piece == wPAWN && (RANK_7 & (1ULL << move.getFrom())) != 0 && (RANK_5 & (1ULL << move.getTo())) != 0){
-            enPassantSquare = move.getTo() + 8;
-        }
-        else if (piece == bPAWN && (RANK_2 & (1ULL << move.getFrom())) != 0 && (RANK_4 & (1ULL << move.getTo())) != 0){
-            enPassantSquare = move.getTo() - 8;
-        }
-        else{
-            enPassantSquare = -1;
-        }
-    }else{
-        enPassantSquare = -1;
-    }
-   
-
-    switch (type) {
-    case NORMAL:
-        pieceBitboards[piece] ^= (1ULL << move.getFrom());
-        pieceBitboards[piece] |= (1ULL << move.getTo());
-        break;
-    case CAPTURE:
-        pieceBitboards[piece] ^= (1ULL << move.getFrom());
-        pieceBitboards[piece] |= (1ULL << move.getTo());
-        pieceBitboards[captured] ^= (1ULL << move.getTo());
-        break;
-    case CASTELING:
-        if (sideToMove == BLACK){
-            if (move.getTo() == 6){
-                pieceBitboards[bKING] |= (1ULL << move.getTo());
-                pieceBitboards[bKING] ^= (1ULL << move.getFrom());
-                pieceBitboards[bROOK] |= (1ULL << 5);
-                pieceBitboards[bROOK] ^= (1ULL << 7);
-            } else {
-                pieceBitboards[bKING] |= (1ULL << move.getTo());
-                pieceBitboards[bKING] ^= (1ULL << move.getFrom());
-                pieceBitboards[bROOK] |= (1ULL << 3);
-                pieceBitboards[bROOK] ^= (1ULL << 0);
-            }
-            castlingRights &= ~(0x01 << BLACK_QUEENSIDE);
-            castlingRights &= ~(0x01 << BLACK_KINGSIDE);
-            move.setRemovedCastelingRights(BLACK_QUEENSIDE);    // All in the name of inversability
-            move.setRemovedCastelingRights(BLACK_KINGSIDE);
+        if (board & (1ULL << i)){
+            std::cout << "1 ";
         } else {
-            if (move.getTo() == 62){
-                pieceBitboards[wKING] |= (1ULL << move.getTo());
-                pieceBitboards[wKING] ^= (1ULL << move.getFrom());
-                pieceBitboards[wROOK] |= (1ULL << 61);
-                pieceBitboards[wROOK] ^= (1ULL << 63);
-            } else {
-                pieceBitboards[wKING] |= (1ULL << move.getTo());
-                pieceBitboards[wKING] ^= (1ULL << move.getFrom());
-                pieceBitboards[wROOK] |= (1ULL << 59);
-                pieceBitboards[wROOK] ^= (1ULL << 56);
-            }
-            castlingRights &= ~(0x01 << WHITE_QUEENSIDE);
-            castlingRights &= ~(0x01 << WHITE_KINGSIDE);
-            move.setRemovedCastelingRights(WHITE_QUEENSIDE);
-            move.setRemovedCastelingRights(WHITE_KINGSIDE);
+            std::cout << "0 ";
         }
-        break;
-    case EN_PASSANT:
-        pieceBitboards[piece] ^= (1ULL << move.getFrom());
-        pieceBitboards[piece] |= (1ULL << move.getTo());
-        pieceBitboards[sideToMove == WHITE ? bPAWN : wPAWN] ^= (1ULL << (sideToMove == WHITE ? move.getTo() + 8 : move.getTo() - 8));
-        break;
-    case PROMOTION:
-        pieceBitboards[piece] ^= (1ULL << move.getFrom());
-        pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN] |= (1ULL << move.getTo());
-        break;
-    case PROMOTION_CAPTURE:
-        pieceBitboards[piece] ^= (1ULL << move.getFrom());
-        pieceBitboards[captured] ^= (1ULL << move.getTo());
-        pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN] |= (1ULL << move.getTo());
-        break;
+        if (i % 8 == 7){
+            std::cout << std::endl;
+        }
     }
-    sideToMove++;
-    moveLog.push_back(move);
+    std::cout << std::endl;
 }
 
- void Position::unmakeMove(){ // TODO: UPDATE CASTLING RIGHTS
-    Cmove move = moveLog.back();
-    PieceType piece = getPiceceAtSquare(move.getTo());
-    PieceType captured = move.getCapturedPiece();
-    Move fromSQ = move.getFrom();
-    moveLog.pop_back();
-    sideToMove++; // SWITches back move turn
+void Position::printEnPassantBoard(){
+    printBoard(enPassantSquare);
+}
+
+
+
+void Position::makeMove(move currmove){
+    PieceType piece = getPieceType(getFromSquare(currmove));
+    PieceType capturedPiece = getPieceType(getToSquare(currmove));
+    MoveType moveType = getMoveType(currmove);
+    Bitboard enPassantMask = enPassantSquare ? enPassantSquare : 0;
+    Square fromSquare = getFromSquare(currmove);
+    Square toSquare = getToSquare(currmove);
+
+    // Update State History
+    stateHistory.push_back(StateInfo{currmove, capturedPiece, fiftyMoveCounter, repetitionCounter,enPassantSquare, castlingRights});
+
+    // Update castling rights
+    if (piece == wKING){
+        castlingRights &= ~(WHITE_OO | WHITE_OO);
+    } else if (piece == bKING){
+        castlingRights &= ~(BLACK_OO | BLACK_OOO);
+    } else if (piece == bROOK){
+        if (fromSquare == A1){
+            castlingRights &= ~BLACK_OOO;
+        } else if (fromSquare == H1){
+            castlingRights &= ~BLACK_OO;
+        }
+    } else if (piece == wROOK){
+        if (fromSquare == A8){
+            castlingRights &= ~WHITE_OOO;
+        } else if (fromSquare == H8){
+            castlingRights &= ~WHITE_OO;
+        }
+    }
+
+    // Update en passant square
+    if (moveType == DOUBLE_PAWN_PUSH){
+        if (piece == wPAWN){
+            enPassantSquare = (1ULL << (static_cast<int>(toSquare) + 8));
+        } else {
+            enPassantSquare = (1ULL << (static_cast<int>(toSquare) - 8));
+        }
+    } else {
+        enPassantSquare = 0;
+    }
+
+    // Update fifty move counter
+    if (piece == wPAWN || piece == bPAWN || capturedPiece != NO_PIECE){
+        fiftyMoveCounter = 0;
+    } else {
+        fiftyMoveCounter++;
+    }
+
+    // Update repetition counter
+    if(currmove == stateHistory[stateHistory.size() - 3].lastMove){ // If the last move is the same as the move 3 moves ago (i.e. this move minus 2 halfmoves acunting for the current move)
+        repetitionCounter++;
+    } else {
+        repetitionCounter = 0;
+    }
+
+    // Update position
+    if (moveType == QUIET || moveType == DOUBLE_PAWN_PUSH){
+        pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
+    }
+
+    else if (moveType == CAPTURE){
+        pieces[capturedPiece] &= ~(1ULL << toSquare);
+        pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
+    }
+
+    else if (moveType == EN_PASSANT){
+        pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
+        if(sideToMove == WHITE){
+            pieces[bPAWN] &= ~(1ULL << (static_cast<int>(toSquare) + 8));
+        } else {
+            pieces[wPAWN] &= ~(1ULL << (static_cast<int>(toSquare) - 8));
+        }
+    }
+
+    else if (moveType == PROMOTON){
+        pieces[piece] &= ~(1ULL << fromSquare);
+        if (sideToMove == WHITE){
+            pieces[wQUEEN] |= (1ULL << toSquare);
+        } else {
+            pieces[bQUEEN] |= (1ULL << toSquare);
+        }
+    }
+
+    else if (moveType == PROMOTION_CAPTURE){
+        pieces[capturedPiece] &= ~(1ULL << toSquare);
+        pieces[piece] &= ~(1ULL << fromSquare);
+        if (sideToMove == WHITE){
+            pieces[wQUEEN] |= (1ULL << toSquare);
+        } else {
+            pieces[bQUEEN] |= (1ULL << toSquare);
+        }
+    }
+
+    else if (moveType == CASTLING){
+        if (sideToMove == WHITE){
+            if (toSquare == G8){
+                pieces[wKING] ^= (1ULL << E8 | (1ULL << G8));
+                pieces[wROOK] ^= (1ULL << H8 | (1ULL << F8));
+            } else {
+                pieces[wKING] ^= (1ULL << E8 | (1ULL << C8));
+                pieces[wROOK] ^= (1ULL << A8 | (1ULL << D8));
+            }
+        } else {
+            if (toSquare == G1){
+                pieces[bKING] ^= (1ULL << E1 | (1ULL << G1));
+                pieces[bROOK] ^= (1ULL << H1 | (1ULL << F1));
+            } else {
+                pieces[bKING] ^= (1ULL << E1 | (1ULL << C1));
+                pieces[bROOK] ^= (1ULL << A1 | (1ULL << D1));
+            }
+        }
+    }
+
+    // Update side to move
+    sideToMove = sideToMove == WHITE ? BLACK : WHITE;
+}
+
+void Position::undoMove(){
+    StateInfo state = stateHistory.back();
+    std::cout << "Undoing move: " << getMoveType(state.lastMove) << std::endl;
+    stateHistory.pop_back();
+    MoveType moveType = getMoveType(state.lastMove);
+    PieceType piece = getPieceType(getToSquare(state.lastMove));
+    PieceType capturedPiece = state.capturedPiece;
+    Square fromSquare = getFromSquare(state.lastMove);
+    Square toSquare = getToSquare(state.lastMove);
+
+    // Update castling rights
+    castlingRights = state.castlingRights;
+
+    // Update en passant square
+    enPassantSquare = state.enPassantSquare;
+
+    // Update fifty move counter
+    fiftyMoveCounter = state.fiftyMoveCounter;
+
+    // Update repetition counter
+    repetitionCounter = state.repetitionCounter;
+
+    // Update side to move
+    sideToMove = sideToMove == WHITE ? BLACK : WHITE;
+
+    if (moveType == CAPTURE){
+        pieces[capturedPiece] |= (1ULL << toSquare);
+        pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
+    }
+
+    else if (moveType == EN_PASSANT){
+        pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
+        if(sideToMove == WHITE){
+            pieces[bPAWN] |= (1ULL << (static_cast<int>(toSquare) + 8));
+        } else {
+            pieces[wPAWN] |= (1ULL << (static_cast<int>(toSquare) - 8));
+        }
+    }
+
+    else if (moveType == PROMOTON){
+        pieces[piece] |= (1ULL << fromSquare);
+        if (sideToMove == WHITE){
+            pieces[wQUEEN] &= ~(1ULL << toSquare);
+        } else {
+            pieces[bQUEEN] &= ~(1ULL << toSquare);
+        }
+    }
+
+    else if (moveType == PROMOTION_CAPTURE){
+        pieces[capturedPiece] |= (1ULL << toSquare);
+        pieces[piece] |= (1ULL << fromSquare);
+        if (sideToMove == WHITE){
+            pieces[wQUEEN] &= ~(1ULL << toSquare);
+        } else {
+            pieces[bQUEEN] &= ~(1ULL << toSquare);
+        }
+    }
     
-    // Gives back castling rights
-    if (move.getRemovedCastelingRights() != 0){             
-        castlingRights |= move.getRemovedCastelingRights();
+    else {
+        makeMove(state.lastMove); // Any non capure or promotion move can be undone by making the move again
+        sideToMove = sideToMove == WHITE ? BLACK : WHITE; // Ugly but making the move again will change the side to move so we need to change it back beore changeing it again
     }
 
-    // En_Passant square handeling TODO: FIX
-
-
-
-    switch (move.getType()) {
-    case NORMAL: // When no pieces are removed we reverse make move function
-        pieceBitboards[piece] ^= (1ULL << move.getTo());
-        pieceBitboards[piece] |= (1ULL << move.getFrom());
-        break;
-    case CASTELING:
-        if (sideToMove == BLACK){
-            if (move.getTo() == 6){
-                pieceBitboards[bKING] ^= (1ULL << move.getTo());
-                pieceBitboards[bKING] |= (1ULL << move.getFrom());
-                pieceBitboards[bROOK] ^= (1ULL << 5);
-                pieceBitboards[bROOK] |= (1ULL << 7);
-            } else {
-                pieceBitboards[bKING] ^= (1ULL << move.getTo());
-                pieceBitboards[bKING] |= (1ULL << move.getFrom());
-                pieceBitboards[bROOK] ^= (1ULL << 3);
-                pieceBitboards[bROOK] |= (1ULL << 0);
-            }
-        } else {
-            if (move.getTo() == 62){
-                pieceBitboards[wKING] ^= (1ULL << move.getTo());
-                pieceBitboards[wKING] |= (1ULL << move.getFrom());
-                pieceBitboards[wROOK] ^= (1ULL << 61);
-                pieceBitboards[wROOK] |= (1ULL << 63);
-            } else {
-                pieceBitboards[wKING] ^= (1ULL << move.getTo());
-                pieceBitboards[wKING] |= (1ULL << move.getFrom());
-                pieceBitboards[wROOK] ^= (1ULL << 59);
-                pieceBitboards[wROOK] |= (1ULL << 56);
-            }
-        }
-        break;
-    case CAPTURE:
-        pieceBitboards[piece] ^= (1ULL << move.getTo());
-        pieceBitboards[piece] |= (1ULL << move.getFrom());
-        pieceBitboards[captured] |= (1ULL << move.getTo());
-        break;
-    case EN_PASSANT:
-        pieceBitboards[piece] ^= (1ULL << move.getTo());
-        pieceBitboards[piece] |= (1ULL << move.getFrom());
-        pieceBitboards[sideToMove == WHITE ? bPAWN : wPAWN] |= (1ULL << (sideToMove == WHITE ? move.getTo() + 8 : move.getTo() - 8));
-        break;
-    case PROMOTION:
-        pieceBitboards[sideToMove == WHITE ? wPAWN : bPAWN] |= (1ULL << move.getFrom());
-        pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN] ^= (1ULL << move.getTo());
-        break;
-    case PROMOTION_CAPTURE:
-        pieceBitboards[sideToMove == WHITE ? wPAWN : bPAWN] |= (1ULL << move.getFrom());
-        pieceBitboards[captured] |= (1ULL << move.getTo());
-        pieceBitboards[sideToMove == WHITE ? wQUEEN : bQUEEN] ^= (1ULL << move.getTo());
-        break;
-    }
- }
-
-PieceType Position::getPiceceAtSquare(int square) {
-    for (PieceType i = wPAWN; i < NO_PIECE; i++) {
-        if (pieceBitboards[i] & (1ULL << square)) {
-            return i;
-        }
-    }
-    return NO_PIECE;
+    sideToMove = sideToMove == WHITE ? BLACK : WHITE;
+    
 }
-
