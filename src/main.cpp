@@ -1,13 +1,15 @@
 #include "position.hpp"
 #include "graphicsBase.hpp"
+#include "movegen.hpp"
 #include <SDL2/SDL.h>
 
 #include <thread>
 
 int main() {
-    Position pos("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    Position pos("rnbqk1nr/pppp1ppp/8/4p3/1b1P4/5N2/PPP1PPPP/RNBQKB1R w KQkq - 2 3"); // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     GraphicsBase graphics(800, 800);
 
+    pos.printBoard( getCheckers(pos, WHITE));
 
     bool running = true;
     while (running){

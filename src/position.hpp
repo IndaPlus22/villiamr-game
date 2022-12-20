@@ -47,10 +47,11 @@ class Position {
         void undoMove();
 
 
-        Bitboard getPieceBitboard (PieceType piece) const { return pieces[piece]; };
-        Bitboard getAllPiecesBitboard (Color color) const { return allPieces[color]; };
-        Bitboard getOccupiedSquaresBitboard () const { return occupiedSquares; };
+        Bitboard getPieceBitboard (PieceType piece) const { return this->pieces[piece]; };
+        Bitboard getAllPiecesBitboard (Color color) const { return this->allPieces[color]; };
+        Bitboard getOccupiedSquaresBitboard () const { return this->occupiedSquares; };
 
+        Color getSideToMove () const { return sideToMove; };
 
         constexpr PieceType getPieceType (Square square) const { // This function being constexpr speeds upp program at runtime but kills compile which we don't care about
             for (PieceType i = wPAWN; i < NO_PIECE; i++){

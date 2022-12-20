@@ -92,9 +92,9 @@ Position::Position(std::string fen) {
     }
 
     // Set all pieces
-    allPieces[WHITE] = pieces[wPAWN] | pieces[wKNIGHT] | pieces[wBISHOP] | pieces[wROOK] | pieces[wQUEEN] | pieces[wKING];
-    allPieces[BLACK] = pieces[bPAWN] | pieces[bKNIGHT] | pieces[bBISHOP] | pieces[bROOK] | pieces[bQUEEN] | pieces[bKING];
-    occupiedSquares = allPieces[WHITE] | allPieces[BLACK];
+    allPieces[WHITE] = (pieces[wPAWN] | pieces[wKNIGHT] | pieces[wBISHOP] | pieces[wROOK] | pieces[wQUEEN] | pieces[wKING]);
+    allPieces[BLACK] = (pieces[bPAWN] | pieces[bKNIGHT] | pieces[bBISHOP] | pieces[bROOK] | pieces[bQUEEN] | pieces[bKING]);
+    occupiedSquares = (allPieces[WHITE] | allPieces[BLACK]);
 
     // Set side to move
     if ( fen[placementEnd + 1] == 'w' ){
