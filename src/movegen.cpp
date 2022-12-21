@@ -3,6 +3,7 @@
 
 #include "movegen.hpp"
 
+
 /* 
     SLIDING PIECE PATTERNS
     * Hashing function to get attack for a given square and occupancy
@@ -317,7 +318,159 @@ void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard 
     }
 }
 
+/*
+    KNIGHT MOVE GENERATION
+    * Special case for pinned pieces. Pinned Knights can never move at all since no move can ever stay on the ray between the king and the pinned piece
+*/
+void generateKnightMoves(std::vector<move> &movelist, Position position, Bitboard pinns, Bitboard checkerRays){
+    Color sideToMove = position.getSideToMove();
+    Bitboard knights = position.getPieceBitboard(sideToMove == WHITE ? wKNIGHT : bKNIGHT) & ~pinns;
+    
+    while (knights) {
+        int origin = std::countr_zero(knights);
+        Bitboard targets = KNIGHT_ATTACKS[origin] & ~position.getAllPiecesBitboard(sideToMove);
+        if (checkerRays) {
+            targets &= checkerRays;
+        }
+        while (targets) {
+            int target = std::countr_zero(targets);
+            targets ^= (1ULL << target);
+            movelist.push_back(encodeMove(origin, target, position.getPieceType(target) == NO_PIECE ? QUIET : CAPTURE));
+        }
+        knights ^= (1ULL << origin);
+    }
+}
 
+
+/*
+    BISHOP MOVE GENERATION
+    * Generate attackboards by magic bitboard hasing
+    * Only allow moves on the checking ray if there is a checking ray
+    * For pinned pieces, only allow moves on the ray between the king and the pinned piece
+*/
+void generateBishopMoves(std::vector<move> &movelist, Position position, Bitboard pinns, Bitboard checkerRays){
+    Color sideToMove = position.getSideToMove();
+    Bitboard bishops = position.getPieceBitboard(sideToMove == WHITE ? wBISHOP : bBISHOP);
+    Bitboard occupied = position.getOccupiedSquaresBitboard();
+    pinns = bishops & pinns;
+    bishops &= ~pinns;
+
+    while (bishops) {
+        int origin = std::countr_zero(bishops);
+        Bitboard targets = getBishopAttacks(origin, occupied) & ~position.getAllPiecesBitboard(sideToMove);
+        if (checkerRays) {
+            targets &= checkerRays;
+        }
+        while (targets) {
+            int target = std::countr_zero(targets);
+            targets ^= (1ULL << target);
+            movelist.push_back(encodeMove(origin, target, position.getPieceType(target) == NO_PIECE ? QUIET : CAPTURE));
+        }
+        bishops ^= (1ULL << origin);
+    }
+
+    while (pinns) {
+        int origin = std::countr_zero(pinns);
+        Bitboard targets = getBishopAttacks(origin, occupied) & ~position.getAllPiecesBitboard(sideToMove);
+        targets &= extendedRayBetween[origin][std::countr_zero(position.getPieceBitboard(sideToMove == WHITE ? wKING : bKING))];
+        if (checkerRays) {
+            targets &= checkerRays;
+        }
+        while (targets) {
+            int target = std::countr_zero(targets);
+            targets ^= (1ULL << target);
+            movelist.push_back(encodeMove(origin, target, position.getPieceType(target) == NO_PIECE ? QUIET : CAPTURE));
+        }
+        pinns ^= (1ULL << origin);
+    }
+}
+
+/*
+    ROOK MOVE GENERATION
+    * Generate attackboards by magic bitboard hasing
+    * Only allow moves on the checking ray if there is a checking ray
+    * For pinned pieces, only allow moves on the ray between the king and the pinned piece
+    * 
+    * Pretty much identical to bishop move generation
+*/
+void generateRookMoves(std::vector<move> &movelist, Position position, Bitboard pinns, Bitboard checkerRays){
+    Color sideToMove = position.getSideToMove();
+    Bitboard rooks = position.getPieceBitboard(sideToMove == WHITE ? wROOK : bROOK);
+    Bitboard occupied = position.getOccupiedSquaresBitboard();
+    pinns = rooks & pinns;
+    rooks &= ~pinns;
+
+    while (rooks) {
+        int origin = std::countr_zero(rooks);
+        Bitboard targets = getRookAttacks(origin, occupied) & ~position.getAllPiecesBitboard(sideToMove);
+        if (checkerRays) {
+            targets &= checkerRays;
+        }
+        while (targets) {
+            int target = std::countr_zero(targets);
+            targets ^= (1ULL << target);
+            movelist.push_back(encodeMove(origin, target, position.getPieceType(target) == NO_PIECE ? QUIET : CAPTURE));
+        }
+        rooks ^= (1ULL << origin);
+    }
+
+    while (pinns) {
+        int origin = std::countr_zero(pinns);
+        Bitboard targets = getRookAttacks(origin, occupied) & ~position.getAllPiecesBitboard(sideToMove);
+        targets &= extendedRayBetween[origin][std::countr_zero(position.getPieceBitboard(sideToMove == WHITE ? wKING : bKING))];
+        if (checkerRays) {
+            targets &= checkerRays;
+        }
+        while (targets) {
+            int target = std::countr_zero(targets);
+            targets ^= (1ULL << target);
+            movelist.push_back(encodeMove(origin, target, position.getPieceType(target) == NO_PIECE ? QUIET : CAPTURE));
+        }
+        pinns ^= (1ULL << origin);
+    }
+}
+
+/*
+    QUEEN MOVE GENERATION
+    * Generate attackboards by magic bitboard hasing
+    * same as rook and bishop move generation combined
+*/
+void generateQueenMoves(std::vector<move> &movelist, Position position, Bitboard pinns, Bitboard checkerRays){
+    Color sideToMove = position.getSideToMove();
+    Bitboard queens = position.getPieceBitboard(sideToMove == WHITE ? wQUEEN : bQUEEN);
+    Bitboard occupied = position.getOccupiedSquaresBitboard();
+    pinns = queens & pinns;
+    queens &= ~pinns;
+
+    while (queens) {
+        int origin = std::countr_zero(queens);
+        Bitboard targets = (getRookAttacks(origin, occupied) | getBishopAttacks(origin, occupied))& ~position.getAllPiecesBitboard(sideToMove);
+        if (checkerRays) {
+            targets &= checkerRays;
+        }
+        while (targets) {
+            int target = std::countr_zero(targets);
+            targets ^= (1ULL << target);
+            movelist.push_back(encodeMove(origin, target, position.getPieceType(target) == NO_PIECE ? QUIET : CAPTURE));
+        }
+        queens ^= (1ULL << origin);
+    }
+
+    while (pinns) {
+        int origin = std::countr_zero(pinns);
+        Bitboard targets = (getRookAttacks(origin, occupied) | getBishopAttacks(origin, occupied)) & ~position.getAllPiecesBitboard(sideToMove);
+        targets &= extendedRayBetween[origin][std::countr_zero(position.getPieceBitboard(sideToMove == WHITE ? wKING : bKING))];
+        if (checkerRays) {
+            targets &= checkerRays;
+        }
+        while (targets) {
+            int target = std::countr_zero(targets);
+            targets ^= (1ULL << target);
+            movelist.push_back(encodeMove(origin, target, position.getPieceType(target) == NO_PIECE ? QUIET : CAPTURE));
+        }
+        pinns ^= (1ULL << origin);
+    }
+}
 
 /* 
     HELPER FUNCTIONS TO GENERATE PINNED PIECES AND CHECKER BITBOARDS
@@ -402,7 +555,7 @@ std::vector<move> generateLegalMoves(Position pos){
 
     std::vector<move> movelist;
 
-    generatePawnMoves(movelist, pos, pins, checkerRays);
+    generateBishopMoves(movelist, pos, pins, checkerRays);
 
     for (move m : movelist){
         std::cout << m << std::endl;
