@@ -219,8 +219,8 @@ void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard 
 
     // handle en passant first
     if(enPassant){
-        Bitboard Eneast = sideToMove == WHITE ? pawnEastAttacks<WHITE>(pawns,enPassant) : pawnEastAttacks<BLACK>(pawns,enPassant);
-        Bitboard Enwest = sideToMove == WHITE ? pawnWestAttacks<WHITE>(pawns,enPassant) : pawnWestAttacks<BLACK>(pawns,enPassant);
+        Bitboard Eneast = sideToMove == WHITE ? pawnEastAttacks<WHITE>(enPassant,pawns) : pawnEastAttacks<BLACK>(enPassant,pawns);
+        Bitboard Enwest = sideToMove == WHITE ? pawnWestAttacks<WHITE>(enPassant,pawns) : pawnWestAttacks<BLACK>(enPassant,pawns);
         if(checkerRays){
             Eneast &= checkerRays;
             Enwest &= checkerRays;
@@ -232,11 +232,15 @@ void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard 
 
             if(Eneast & pinns){ // Check if pinned
                 Bitboard between = extendedRayBetween[origin][std::countr_zero(position.getPieceBitboard(sideToMove == WHITE ? wKING : bKING))];
-                if(between & (1ULL << target))
+                if(between & (1ULL << target)){
                     movelist.push_back(encodeMove(origin, target, EN_PASSANT));
+                    std::cout << "Enpassant move: " << origin << " " << target << std::endl;
+                }
             }
-            else
+            else{
                 movelist.push_back(encodeMove(origin, target, EN_PASSANT));
+                std::cout << "Enpassant move: " << origin << " " << target << std::endl;
+            }
         }
         if (Enwest){ // West enPassant possible
             int origin = std::countr_zero(sideToMove == WHITE ? Enwest << 9 : Enwest >> 7);
@@ -244,11 +248,15 @@ void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard 
 
             if(Enwest & pinns){ // Check if pinned
                 Bitboard between = extendedRayBetween[origin][std::countr_zero(position.getPieceBitboard(sideToMove == WHITE ? wKING : bKING))];
-                if(between & (1ULL << target))
+                if(between & (1ULL << target)){
                     movelist.push_back(encodeMove(origin, target, EN_PASSANT));
+                    std::cout << "Enpassant move: " << origin << " " << target << std::endl;
+                }
             }
-            else
+            else{
                 movelist.push_back(encodeMove(origin, target, EN_PASSANT));
+                std::cout << "Enpassant move: " << origin << " " << target << std::endl;
+            }
 
         }
         
@@ -259,6 +267,7 @@ void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard 
     Bitboard east = sideToMove == WHITE ? pawnEastAttacks<WHITE>(pawns,enemy) : pawnEastAttacks<BLACK>(pawns,enemy);
     Bitboard west = sideToMove == WHITE ? pawnWestAttacks<WHITE>(pawns,enemy) : pawnWestAttacks<BLACK>(pawns,enemy);
 
+
     while (pins) {
         int pin = std::countr_zero(pins);
         Bitboard pinnedPiece = (1ULL << pin);
@@ -268,6 +277,8 @@ void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard 
         doublePush |= sideToMove == WHITE ? pawnDoublePush<WHITE>(pinnedPiece, occupied) & between: pawnDoublePush<BLACK>(pinnedPiece, occupied) & between;
         east |= sideToMove == WHITE ? pawnEastAttacks<WHITE>(pinnedPiece,enemy) & between: pawnEastAttacks<BLACK>(pinnedPiece,enemy) & between;
         west |= sideToMove == WHITE ? pawnWestAttacks<WHITE>(pinnedPiece,enemy) & between: pawnWestAttacks<BLACK>(pinnedPiece,enemy) & between;
+
+        pins ^= (1ULL << pin);
     }
 
     if (checkerRays) {
@@ -290,7 +301,7 @@ void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard 
         movelist.push_back(encodeMove(origin, target, sideToMove == WHITE ? (target < 8 ? PROMOTON : QUIET) : (target > 55 ? PROMOTON : QUIET)));
     }
 
-    origins = sideToMove == WHITE ? (doublePush >> 16) : (doublePush >> 16);
+    origins = sideToMove == WHITE ? (doublePush << 16) : (doublePush >> 16);
     while (origins && doublePush) {
         int origin = std::countr_zero(origins);
         int target = std::countr_zero(doublePush);
@@ -472,6 +483,104 @@ void generateQueenMoves(std::vector<move> &movelist, Position position, Bitboard
     }
 }
 
+/*
+    KING MOVE GENERATION
+    * Generate attackboard for opponent pieces
+    * Allow only moves that don't put the king on square that is attacked by opponent
+    * Generate castling moves if possible
+*/
+void generateKingMoves(std::vector<move> &movelist, Position position, Bitboard oppAttacks){
+    Color sideToMove = position.getSideToMove();
+    Bitboard king = position.getPieceBitboard(sideToMove == WHITE ? wKING : bKING);
+    Bitboard occupied = position.getOccupiedSquaresBitboard();
+
+    int origin = std::countr_zero(king);
+    Bitboard targets = kingAttacks[origin] & ~position.getAllPiecesBitboard(sideToMove) & ~oppAttacks;
+    while (targets) {
+        int target = std::countr_zero(targets);
+        targets ^= (1ULL << target);
+        movelist.push_back(encodeMove(origin, target, position.getPieceType(target) == NO_PIECE ? QUIET : CAPTURE));
+    }
+
+    uint8_t castelingRights = position.getCastlingRights();
+
+    if (sideToMove == WHITE){
+        if(castelingRights & WHITE_OO && !(oppAttacks & 0b01110000'00000000'00000000'00000000'00000000'00000000'00000000'00000000) && !(occupied & 0b01100000'00000000'00000000'00000000'00000000'00000000'00000000'00000000)){
+            movelist.push_back(encodeMove(E8, G8, CASTLING));
+            std::cout << "WOO" << std::endl;
+        }
+        if(castelingRights & WHITE_OOO && !(oppAttacks & 0b00011100'00000000'00000000'00000000'00000000'00000000'00000000'00000000) && !(occupied & 0b00001100'00000000'00000000'00000000'00000000'00000000'00000000'00000000)){
+            movelist.push_back(encodeMove(E8, C8, CASTLING));
+            std::cout << "WOOO" << std::endl;
+        }
+    }else {
+        if(castelingRights & BLACK_OO && !(oppAttacks & 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'01110000) && !(occupied & 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'01100000)){
+            movelist.push_back(encodeMove(E1, G1, CASTLING));
+            std::cout << "BOO" << std::endl;
+        }
+        if(castelingRights & BLACK_OOO && !(oppAttacks & 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'00011100) && !(occupied & 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'00001100)){
+            movelist.push_back(encodeMove(E1, C1, CASTLING));
+            std::cout << "BOOO" << std::endl;
+        }
+    }
+
+    
+
+}
+
+/*
+    HELPER FUNCTION TO GENERATE ATTACKBOARDS FOR ALL PIECES
+*/
+Bitboard getAttackboard(Position pos, Color generatingside){
+    Bitboard attackboard = 0;
+    Color oppside = generatingside == WHITE ? BLACK : WHITE;
+    Bitboard oppPieces = pos.getAllPiecesBitboard(oppside);
+    Bitboard ownPieces = pos.getAllPiecesBitboard(generatingside);
+    Bitboard occupied = pos.getOccupiedSquaresBitboard();
+
+    Bitboard pawns = pos.getPieceBitboard(generatingside == WHITE ? wPAWN : bPAWN);
+    Bitboard knights = pos.getPieceBitboard(generatingside == WHITE ? wKNIGHT : bKNIGHT);
+    Bitboard bishops = pos.getPieceBitboard(generatingside == WHITE ? wBISHOP : bBISHOP);
+    Bitboard rooks = pos.getPieceBitboard(generatingside == WHITE ? wROOK : bROOK);
+    Bitboard queens = pos.getPieceBitboard(generatingside == WHITE ? wQUEEN : bQUEEN);
+    Bitboard king = pos.getPieceBitboard(generatingside == WHITE ? wKING : bKING);
+
+    attackboard |= generatingside == WHITE ? (pawnEastAttacks<WHITE>(pawns,oppPieces) | pawnWestAttacks<WHITE>(pawns,oppPieces)) : (pawnEastAttacks<BLACK>(pawns,oppPieces) | pawnWestAttacks<BLACK>(pawns,oppPieces));
+
+    while (knights) {
+        int square = std::countr_zero(knights);
+        knights ^= (1ULL << square);
+        attackboard |= KNIGHT_ATTACKS[square] & ~ownPieces;
+    }
+
+    while (bishops) {
+        int square = std::countr_zero(bishops);
+        bishops ^= (1ULL << square);
+        attackboard |= getBishopAttacks(square, occupied) & ~ownPieces;
+    }
+
+    while (rooks) {
+        int square = std::countr_zero(rooks);
+        rooks ^= (1ULL << square);
+        attackboard |= getRookAttacks(square, occupied) & ~ownPieces;
+    }
+
+    while (queens) {
+        int square = std::countr_zero(queens);
+        queens ^= (1ULL << square);
+        attackboard |= (getRookAttacks(square, occupied) | getBishopAttacks(square, occupied)) & ~ownPieces;
+    }
+
+    while (king) {
+        int square = std::countr_zero(king);
+        king ^= (1ULL << square);
+        attackboard |= kingAttacks[square] & ~ownPieces;
+    }
+
+    return attackboard;
+}
+
+
 /* 
     HELPER FUNCTIONS TO GENERATE PINNED PIECES AND CHECKER BITBOARDS
 */
@@ -538,9 +647,14 @@ Bitboard getCheckers(Position pos, Color sideToMove){
 
 
 std::vector<move> generateLegalMoves(Position pos){
+    pos.updateAllPiecesBitboard();
+
     Bitboard pins = getPinns(pos, pos.getSideToMove());
     Bitboard checkers = getCheckers(pos, pos.getSideToMove());
+    int numCheckers = std::popcount(checkers);
     Bitboard checkerRays = 0;
+
+
 
     while (checkers){ // get all checker rays or single squares if knight to only generate moves that block check or capture the checker
         int checkerSquare = std::countr_zero(checkers);
@@ -552,15 +666,21 @@ std::vector<move> generateLegalMoves(Position pos){
     }
 
 
-
+    Bitboard attackboard = getAttackboard(pos, pos.getSideToMove() == WHITE ? BLACK : WHITE);
     std::vector<move> movelist;
 
-    generateBishopMoves(movelist, pos, pins, checkerRays);
-
-    for (move m : movelist){
-        std::cout << m << std::endl;
+    if (numCheckers > 1){ // If there is more than one checker, only king moves are legal
+        generateKingMoves(movelist,pos,attackboard);
+    }
+    else{
+        generatePawnMoves(movelist,pos,pins,checkerRays);
+        generateKnightMoves(movelist,pos,pins,checkerRays);
+        generateBishopMoves(movelist,pos,pins,checkerRays);
+        generateRookMoves(movelist,pos,pins,checkerRays);
+        generateQueenMoves(movelist,pos,pins,checkerRays);
+        generateKingMoves(movelist,pos,attackboard);
     }
 
-    return {};
+    return movelist;
 }
     

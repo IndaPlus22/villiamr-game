@@ -176,7 +176,7 @@ void Position::printEnPassantBoard(){
 }
 
 
-
+int ennum = 0;
 void Position::makeMove(move currmove){
     PieceType piece = getPieceType(getFromSquare(currmove));
     PieceType capturedPiece = getPieceType(getToSquare(currmove));
@@ -296,7 +296,6 @@ void Position::makeMove(move currmove){
 
 void Position::undoMove(){
     StateInfo state = stateHistory.back();
-    std::cout << "Undoing move: " << getMoveType(state.lastMove) << std::endl;
     stateHistory.pop_back();
     MoveType moveType = getMoveType(state.lastMove);
     PieceType piece = getPieceType(getToSquare(state.lastMove));
@@ -356,12 +355,30 @@ void Position::undoMove(){
         }
     }
     
-    else { // CASTLING
-        makeMove(state.lastMove); // Castling is a special case where we need to make the move again to undo it
-        sideToMove = sideToMove == WHITE ? BLACK : WHITE; // Ugly but making the move again will change the side to move so we need to change it back beore changeing it again
-        stateHistory.pop_back(); // Remove the state that was created by the makeMove() call
+    else if (moveType == CASTLING){
+        if (sideToMove == WHITE){
+            if (toSquare == G8){
+                pieces[wKING] ^= (1ULL << E8 | (1ULL << G8));
+                pieces[wROOK] ^= (1ULL << H8 | (1ULL << F8));
+            } else {
+                pieces[wKING] ^= (1ULL << E8 | (1ULL << C8));
+                pieces[wROOK] ^= (1ULL << A8 | (1ULL << D8));
+            }
+        } else {
+            if (toSquare == G1){
+                pieces[bKING] ^= (1ULL << E1 | (1ULL << G1));
+                pieces[bROOK] ^= (1ULL << H1 | (1ULL << F1));
+            } else {
+                pieces[bKING] ^= (1ULL << E1 | (1ULL << C1));
+                pieces[bROOK] ^= (1ULL << A1 | (1ULL << D1));
+            }
+        }
     }
-
-    sideToMove = sideToMove == WHITE ? BLACK : WHITE;
     
+}
+
+void Position::updateAllPiecesBitboard(){
+    allPieces[WHITE] = (pieces[wPAWN] | pieces[wKNIGHT] | pieces[wBISHOP] | pieces[wROOK] | pieces[wQUEEN] | pieces[wKING]);
+    allPieces[BLACK] = (pieces[bPAWN] | pieces[bKNIGHT] | pieces[bBISHOP] | pieces[bROOK] | pieces[bQUEEN] | pieces[bKING]);
+    occupiedSquares = (allPieces[WHITE] | allPieces[BLACK]);
 }

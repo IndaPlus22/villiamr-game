@@ -55,7 +55,11 @@ class Position {
 
         Color getSideToMove () const { return sideToMove; };
 
-        constexpr PieceType getPieceType (Square square) const { // This function being constexpr speeds upp program at runtime but kills compile which we don't care about
+        uint8_t getCastlingRights () const { return castlingRights; };
+
+        void updateAllPiecesBitboard();
+
+        PieceType getPieceType (Square square) const { // This function being constexpr speeds upp program at runtime but kills compile which we don't care about
             for (PieceType i = wPAWN; i < NO_PIECE; i++){
                 if (pieces[i] & (1ULL << square)){
                     return i;
@@ -64,7 +68,7 @@ class Position {
             return NO_PIECE;
         };
 
-        constexpr PieceType getPieceType (int square) const { // This function being constexpr speeds upp program at runtime but kills compile which we don't care about
+        PieceType getPieceType (int square) const { // This function being constexpr speeds upp program at runtime but kills compile which we don't care about
             for (PieceType i = wPAWN; i < NO_PIECE; i++){
                 if (pieces[i] & (1ULL << square)){
                     return i;

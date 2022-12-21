@@ -10,5 +10,4 @@
 
 std::vector<move> generateLegalMoves(Position pos);
 
-Bitboard getCheckers(Position pos, Color sideToMove);
 #endif
