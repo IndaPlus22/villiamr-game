@@ -206,7 +206,7 @@ const Bitboard extendedRayBetween[64][64] = {
     * Then we generate all pawn moves and check if they are legal (i.e inline with possible pinners and checker rays)
 */
 
-void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard pinns, Bitboard checkerRays) {
+void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard pinns, Bitboard checkerRays) { // TODO: PLAYTEST ENPASSANT
     Color sideToMove = position.getSideToMove();
     Bitboard pawns = position.getPieceBitboard(sideToMove == WHITE ? wPAWN : bPAWN);
     Bitboard enemy = position.getAllPiecesBitboard(sideToMove == WHITE ? BLACK : WHITE);
@@ -219,43 +219,40 @@ void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard 
 
     // handle en passant first
     if(enPassant){
-        Bitboard Eneast = sideToMove == WHITE ? pawnEastAttacks<WHITE>(enPassant,pawns) : pawnEastAttacks<BLACK>(enPassant,pawns);
-        Bitboard Enwest = sideToMove == WHITE ? pawnWestAttacks<WHITE>(enPassant,pawns) : pawnWestAttacks<BLACK>(enPassant,pawns);
+        Bitboard Eneast = sideToMove == WHITE ? pawnEastAttacks<BLACK>(enPassant,pawns) : pawnEastAttacks<WHITE>(enPassant,pawns);
+        Bitboard Enwest = sideToMove == WHITE ? pawnWestAttacks<BLACK>(enPassant,pawns) : pawnWestAttacks<WHITE>(enPassant,pawns);
         if(checkerRays){
             Eneast &= checkerRays;
             Enwest &= checkerRays;
         }
 
         if(Eneast){ // East enPassant possible
-            int origin = std::countr_zero(sideToMove == WHITE ? Eneast << 7 : Eneast >> 9);
+            int origin = std::countr_zero(Eneast);
             int target = std::countr_zero(enPassant);
 
             if(Eneast & pinns){ // Check if pinned
                 Bitboard between = extendedRayBetween[origin][std::countr_zero(position.getPieceBitboard(sideToMove == WHITE ? wKING : bKING))];
                 if(between & (1ULL << target)){
                     movelist.push_back(encodeMove(origin, target, EN_PASSANT));
-                    std::cout << "Enpassant move: " << origin << " " << target << std::endl;
+                    
                 }
             }
             else{
                 movelist.push_back(encodeMove(origin, target, EN_PASSANT));
-                std::cout << "Enpassant move: " << origin << " " << target << std::endl;
             }
         }
         if (Enwest){ // West enPassant possible
-            int origin = std::countr_zero(sideToMove == WHITE ? Enwest << 9 : Enwest >> 7);
+            int origin = std::countr_zero(Enwest);
             int target = std::countr_zero(enPassant);
 
             if(Enwest & pinns){ // Check if pinned
                 Bitboard between = extendedRayBetween[origin][std::countr_zero(position.getPieceBitboard(sideToMove == WHITE ? wKING : bKING))];
                 if(between & (1ULL << target)){
                     movelist.push_back(encodeMove(origin, target, EN_PASSANT));
-                    std::cout << "Enpassant move: " << origin << " " << target << std::endl;
                 }
             }
             else{
                 movelist.push_back(encodeMove(origin, target, EN_PASSANT));
-                std::cout << "Enpassant move: " << origin << " " << target << std::endl;
             }
 
         }
@@ -489,13 +486,13 @@ void generateQueenMoves(std::vector<move> &movelist, Position position, Bitboard
     * Allow only moves that don't put the king on square that is attacked by opponent
     * Generate castling moves if possible
 */
-void generateKingMoves(std::vector<move> &movelist, Position position, Bitboard oppAttacks){
+void generateKingMoves(std::vector<move> &movelist, Position position, Bitboard oppAttacks){ // TODO: CASTELING MIGHT BE BROKEN
     Color sideToMove = position.getSideToMove();
     Bitboard king = position.getPieceBitboard(sideToMove == WHITE ? wKING : bKING);
     Bitboard occupied = position.getOccupiedSquaresBitboard();
 
     int origin = std::countr_zero(king);
-    Bitboard targets = kingAttacks[origin] & ~position.getAllPiecesBitboard(sideToMove) & ~oppAttacks;
+    Bitboard targets = (kingAttacks[origin] & ~position.getAllPiecesBitboard(sideToMove)) & ~oppAttacks;
     while (targets) {
         int target = std::countr_zero(targets);
         targets ^= (1ULL << target);

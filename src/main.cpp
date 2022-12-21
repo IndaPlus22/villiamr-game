@@ -27,7 +27,7 @@ int main() {
     GraphicsBase graphics(800, 800);
 
 
-    Bitboard nodes = perft(6,pos,graphics);
+    Bitboard nodes = perft(5,pos,graphics);
     std::cout << nodes << std::endl;
 
 /*
