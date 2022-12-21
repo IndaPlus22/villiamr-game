@@ -182,8 +182,8 @@ void Position::makeMove(move currmove){
     PieceType capturedPiece = getPieceType(getToSquare(currmove));
     MoveType moveType = getMoveType(currmove);
     Bitboard enPassantMask = enPassantSquare ? enPassantSquare : 0;
-    Square fromSquare = getFromSquare(currmove);
-    Square toSquare = getToSquare(currmove);
+    int fromSquare = getFromSquare(currmove);
+    int toSquare = getToSquare(currmove);
 
     // Update State History
     stateHistory.push_back(StateInfo{currmove, capturedPiece, fiftyMoveCounter, repetitionCounter,enPassantSquare, castlingRights});
@@ -210,9 +210,9 @@ void Position::makeMove(move currmove){
     // Update en passant square
     if (moveType == DOUBLE_PAWN_PUSH){
         if (piece == wPAWN){
-            enPassantSquare = (1ULL << (static_cast<int>(toSquare) + 8));
+            enPassantSquare = (1ULL << (toSquare + 8));
         } else {
-            enPassantSquare = (1ULL << (static_cast<int>(toSquare) - 8));
+            enPassantSquare = (1ULL << (toSquare - 8));
         }
     } else {
         enPassantSquare = 0;
@@ -245,9 +245,9 @@ void Position::makeMove(move currmove){
     else if (moveType == EN_PASSANT){
         pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
         if(sideToMove == WHITE){
-            pieces[bPAWN] &= ~(1ULL << (static_cast<int>(toSquare) + 8));
+            pieces[bPAWN] &= ~(1ULL << (toSquare + 8));
         } else {
-            pieces[wPAWN] &= ~(1ULL << (static_cast<int>(toSquare) - 8));
+            pieces[wPAWN] &= ~(1ULL << (toSquare - 8));
         }
     }
 
@@ -301,8 +301,8 @@ void Position::undoMove(){
     MoveType moveType = getMoveType(state.lastMove);
     PieceType piece = getPieceType(getToSquare(state.lastMove));
     PieceType capturedPiece = state.capturedPiece;
-    Square fromSquare = getFromSquare(state.lastMove);
-    Square toSquare = getToSquare(state.lastMove);
+    int fromSquare = getFromSquare(state.lastMove);
+    int toSquare = getToSquare(state.lastMove);
 
     // Update castling rights
     castlingRights = state.castlingRights;
@@ -331,9 +331,9 @@ void Position::undoMove(){
     else if (moveType == EN_PASSANT){
         pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
         if(sideToMove == WHITE){
-            pieces[bPAWN] |= (1ULL << (static_cast<int>(toSquare) + 8));
+            pieces[bPAWN] |= (1ULL << (toSquare + 8));
         } else {
-            pieces[wPAWN] |= (1ULL << (static_cast<int>(toSquare) - 8));
+            pieces[wPAWN] |= (1ULL << (toSquare - 8));
         }
     }
 

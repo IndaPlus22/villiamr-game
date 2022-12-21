@@ -64,6 +64,15 @@ class Position {
             return NO_PIECE;
         };
 
+        constexpr PieceType getPieceType (int square) const { // This function being constexpr speeds upp program at runtime but kills compile which we don't care about
+            for (PieceType i = wPAWN; i < NO_PIECE; i++){
+                if (pieces[i] & (1ULL << square)){
+                    return i;
+                }
+            }
+            return NO_PIECE;
+        };
+
 
         void printBoard(Bitboard board);
         void printEnPassantBoard();

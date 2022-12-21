@@ -99,12 +99,12 @@ constexpr move encodeMove(int from,int to,MoveType moveType) {
     return from | (to << 6) | (moveType << 12);
 }
 
-constexpr Square getFromSquare(move m) {
-    return static_cast<Square>(m & 0x3F);
+constexpr int getFromSquare(move m) {
+    return (m & 0x3F);
 }
 
-constexpr Square getToSquare(move m) {
-    return static_cast<Square>((m >> 6) & 0x3F);
+constexpr int getToSquare(move m) {
+    return ((m >> 6) & 0x3F);
 }
 
 constexpr MoveType getMoveType(move m) {
