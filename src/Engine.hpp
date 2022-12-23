@@ -25,4 +25,6 @@ public:
     move getEngineMove() const {return bestMove;};
 };
 
+// TODO: IMPLEMENT ZOBRIST HASHING and MOVETYPE CHECKS TO ALLOW QUIESCENCE SEARCH TO BE MORE EFFECTIVE (AND MAYBE SEE CHECKMATES)
+
 #endif
