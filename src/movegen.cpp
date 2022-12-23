@@ -538,13 +538,18 @@ Bitboard getAttackboard(Position pos, Color generatingside){
     Bitboard rooks = pos.getPieceBitboard(generatingside == WHITE ? wROOK : bROOK);
     Bitboard queens = pos.getPieceBitboard(generatingside == WHITE ? wQUEEN : bQUEEN);
     Bitboard king = pos.getPieceBitboard(generatingside == WHITE ? wKING : bKING);
+    Bitboard enPassant = 0;
 
     Bitboard oppKing = pos.getPieceBitboard(oppside == WHITE ? wKING : bKING);
 
     Bitboard occupied = (pos.getOccupiedSquaresBitboard());
 
-    attackboard |= generatingside == WHITE ? (pawnEastAttacks<WHITE>(pawns,occupied) | pawnWestAttacks<WHITE>(pawns,occupied)) : (pawnEastAttacks<BLACK>(pawns,occupied) | pawnWestAttacks<BLACK>(pawns,occupied));
+    attackboard |= generatingside == WHITE ? (pawnEastAttacks<WHITE>(pawns,0xff'ff'ff'ff'ff'ff'ff'ff) | pawnWestAttacks<WHITE>(pawns,0xff'ff'ff'ff'ff'ff'ff'ff)) : (pawnEastAttacks<BLACK>(pawns,0xff'ff'ff'ff'ff'ff'ff'ff) | pawnWestAttacks<BLACK>(pawns,0xff'ff'ff'ff'ff'ff'ff'ff));
     occupied &= ~oppKing;
+
+    if((enPassant = pos.getEnpassantSquare())){
+        attackboard |= generatingside == WHITE ? (pawnEastAttacks<WHITE>(pawns,enPassant) | pawnWestAttacks<WHITE>(pawns,enPassant)) : (pawnEastAttacks<BLACK>(pawns,enPassant) | pawnWestAttacks<BLACK>(pawns,enPassant));
+    }
 
 
     while (knights) {
@@ -628,12 +633,12 @@ Bitboard getCheckers(Position pos, Color sideToMove){
                             | (getBishopAttacks(kingSquare, pos.getOccupiedSquaresBitboard())
                             & (pos.getPieceBitboard(sideToMove == WHITE ? bBISHOP : wBISHOP) | pos.getPieceBitboard(sideToMove == WHITE ? bQUEEN : wQUEEN)));
 
-    checkers |= slidingCheckers | (KNIGHT_ATTACKS[kingSquare] & pos.getPieceBitboard(sideToMove == WHITE ? bKNIGHT : wKNIGHT));
+    checkers |= (slidingCheckers | (KNIGHT_ATTACKS[kingSquare] & pos.getPieceBitboard(sideToMove == WHITE ? bKNIGHT : wKNIGHT)));
 
     if (sideToMove == WHITE){
-        checkers |= ((pawnEastAttacks<WHITE>(pos.getPieceBitboard(wKING),pos.getAllPiecesBitboard(BLACK))) | (pawnWestAttacks<WHITE>(pos.getPieceBitboard(wKING),pos.getAllPiecesBitboard(BLACK))));
+        checkers |= ((pawnEastAttacks<WHITE>(pos.getPieceBitboard(wKING),pos.getPieceBitboard(bPAWN))) | (pawnWestAttacks<WHITE>(pos.getPieceBitboard(wKING),pos.getPieceBitboard(bPAWN))));
     } else {
-        checkers |= ((pawnEastAttacks<BLACK>(pos.getPieceBitboard(bKING),pos.getAllPiecesBitboard(WHITE))) | (pawnWestAttacks<BLACK>(pos.getPieceBitboard(bKING),pos.getAllPiecesBitboard(WHITE))));
+        checkers |= ((pawnEastAttacks<BLACK>(pos.getPieceBitboard(bKING),pos.getPieceBitboard(wPAWN))) | (pawnWestAttacks<BLACK>(pos.getPieceBitboard(bKING),pos.getPieceBitboard(wPAWN))));
     }
 
     return checkers;
@@ -666,6 +671,8 @@ std::vector<move> generateLegalMoves(Position &pos){
         else
             checkerRays |= rayBetween[std::countr_zero(pos.getPieceBitboard(pos.getSideToMove() == WHITE ? wKING : bKING))][checkerSquare] | (1ULL << checkerSquare);
         checkers ^= (1ULL << checkerSquare);
+        if(pos.getEnpassantSquare())
+            checkerRays |= pos.getEnpassantSquare();
     }
 
 

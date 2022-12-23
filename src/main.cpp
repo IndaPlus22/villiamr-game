@@ -6,21 +6,19 @@
 #include <chrono>
 #include <thread>
 
-int hojballe = 0;
+int hojballe = 3195901860;
 
-Bitboard perft(int depth, Position &position){
+Bitboard perft(int depth, Position &position,GraphicsBase &graphics){
     if (depth == 0){
         return 1;
     }
 
     Bitboard nodes = 0;
     std::vector<move> moves = generateLegalMoves(position);
-    if(position.getCheckmate()){
-        hojballe++;
-    }
     for (move m : moves){
         position.makeMove(m);
-        nodes += perft(depth - 1, position);
+        //graphics.drawBoard(position, {});
+        nodes += perft(depth - 1, position,graphics);
         position.undoMove();
     }
     return nodes;
@@ -39,10 +37,10 @@ void threadFunction(Position &pos, Engine engine, GraphicsBase &graphics, bool &
 int main() {
     Position pos("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     GraphicsBase graphics(800, 800);
-    Engine engine(BLACK, 7);
+    Engine engine(BLACK, 8);
 
 
-    std::cout << "Perft: " << perft(5, pos) << std::endl;
+    std::cout << "\rPerft: " << perft(8, pos,graphics) << std::endl;
 
     std::vector<int> highlightedSquares;
     std::vector<move> moves = generateLegalMoves(pos);

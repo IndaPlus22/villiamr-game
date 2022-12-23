@@ -21,6 +21,7 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
     for ( move m : moves ) {
         pos.makeMove(m);
         int score = -minimax(pos,depth-1, -beta, -alpha);
+        std::cout << "Score: " << score << std::endl;
         pos.undoMove();
         if( score >= beta )
             return beta;   //  fail hard beta-cutoff
@@ -68,6 +69,7 @@ int Engine::quiesce(Position pos, int alpha, int beta){
 
 int Engine::evaluatePosition(Position pos){
     int score = 0;
+    Color sideToMove = pos.getSideToMove();
     std::vector<int> pieceValues = {1, 3, 3, 5, 9, 100, -1, -3, -3, -5, -9, -100};
     for (PieceType p = wPAWN; p < NO_PIECE; p++){
         score += pieceValues[p] * std::popcount(pos.getPieceBitboard(p));
@@ -76,13 +78,15 @@ int Engine::evaluatePosition(Position pos){
     score += std::popcount(pos.getAllPiecesBitboard(WHITE) & center);
     score -= std::popcount(pos.getAllPiecesBitboard(BLACK) & center);
 
-    Bitboard originalPos = 0xFF;
-    Bitboard originalPos2 = (0xFFULL << 56);
-    score -= std::popcount(pos.getAllPiecesBitboard(WHITE) & originalPos) * 2;
-    score += std::popcount(pos.getAllPiecesBitboard(BLACK) & originalPos2) * 2;
+    Bitboard WHITE_DEVELOPMENT = 0x00'00'ff'ff'ff'ff'ff'ff;
+    Bitboard BLACK_DEVELOPMENT = 0xff'ff'ff'ff'ff'ff'00'00;
+    score += std::popcount((pos.getAllPiecesBitboard(WHITE) & ~pos.getPieceBitboard(wPAWN)) & WHITE_DEVELOPMENT);
+    score -= std::popcount((pos.getAllPiecesBitboard(BLACK) & ~pos.getPieceBitboard(bPAWN)) & BLACK_DEVELOPMENT);
 
+    generateLegalMoves(pos);
     if (pos.getCheckmate()){
-        pos.getSideToMove() == WHITE ? score -= INT16_MAX : score += INT16_MAX;
+        if (sideToMove == WHITE) {return INT16_MIN + 1000;} 
+        return INT16_MAX - 1000;
     }
-    return pos.getSideToMove() == WHITE ? score : -score;
+    return sideToMove == WHITE ? score : -score;
 }
