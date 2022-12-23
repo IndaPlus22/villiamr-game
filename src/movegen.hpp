@@ -3,11 +3,12 @@
 
 #include <vector>
 #include <bit>
+#include <algorithm>
 
 #include "types.hpp"
 #include "position.hpp"
 #include "magicConstants.hpp"
 
-std::vector<move> generateLegalMoves(Position pos);
+std::vector<move> generateLegalMoves(Position &pos);
 
 #endif

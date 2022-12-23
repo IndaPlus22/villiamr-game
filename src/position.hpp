@@ -39,7 +39,10 @@ class Position {
         std::vector<StateInfo> stateHistory;
 
 
+        bool gameIsOver;
+        bool checkmate;
     public:
+
         Position(std::string fen);
         ~Position() = default;
 
@@ -52,10 +55,15 @@ class Position {
         Bitboard getOccupiedSquaresBitboard () const { return this->occupiedSquares; };
 
         Bitboard getEnpassantSquare () const { return this->enPassantSquare; };
+        uint8_t getCastlingRights () const { return castlingRights; };
 
         Color getSideToMove () const { return sideToMove; };
 
-        uint8_t getCastlingRights () const { return castlingRights; };
+        bool getGameIsOver() const { return gameIsOver; };
+        bool getCheckmate() const { return checkmate; };
+        
+        void setGameIsOver() { this->gameIsOver = 1; };
+        void setCheckmate() { this->checkmate = 1; };
 
         void updateAllPiecesBitboard();
 

@@ -55,8 +55,8 @@ typedef enum MoveType {
     QUIET,
     DOUBLE_PAWN_PUSH,
     CASTLING,
-    CAPTURE,
     EN_PASSANT,
+    CAPTURE,
     PROMOTON,
     PROMOTION_CAPTURE
 }MoveType;

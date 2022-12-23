@@ -8,6 +8,9 @@
 Position::Position(std::string fen) {
     // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" DEFAULT FEN
 
+    this->gameIsOver = false;
+    this->checkmate = false;
+
     // Set all pieces to 0
     for (PieceType i = wPAWN; i < NO_PIECE; i++){
         this->pieces[i] = 0;
@@ -176,7 +179,6 @@ void Position::printEnPassantBoard(){
 }
 
 
-int ennum = 0;
 void Position::makeMove(move currmove){
     PieceType piece = getPieceType(getFromSquare(currmove));
     PieceType capturedPiece = getPieceType(getToSquare(currmove));
@@ -226,11 +228,12 @@ void Position::makeMove(move currmove){
     }
 
     // Update repetition counter
-    if(currmove == stateHistory[stateHistory.size() - 3].lastMove){ // If the last move is the same as the move 3 moves ago (i.e. this move minus 2 halfmoves acunting for the current move)
+    if(currmove == stateHistory[stateHistory.size() - 5].lastMove){ // If the last move is the same as the move 3 moves ago (i.e. this move minus 2 halfmoves acunting for the current move)
         repetitionCounter++;
     } else {
         repetitionCounter = 0;
     }
+    
 
     // Update position
     if (moveType == QUIET || moveType == DOUBLE_PAWN_PUSH){
@@ -292,6 +295,14 @@ void Position::makeMove(move currmove){
 
     // Update side to move
     sideToMove = sideToMove == WHITE ? BLACK : WHITE;
+
+    if(repetitionCounter >= 6){
+        gameIsOver = true;
+    }
+
+    if(fiftyMoveCounter >= 100){
+        gameIsOver = true;
+    }
 }
 
 void Position::undoMove(){
@@ -317,6 +328,12 @@ void Position::undoMove(){
 
     // Update side to move
     sideToMove = sideToMove == WHITE ? BLACK : WHITE;
+
+    // game over
+    if(gameIsOver || checkmate){
+        gameIsOver = false;
+        checkmate = false;
+    }
 
     if (moveType == QUIET || moveType == DOUBLE_PAWN_PUSH){
         pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
