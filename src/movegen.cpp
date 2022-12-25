@@ -198,7 +198,6 @@ const Bitboard extendedRayBetween[64][64] = {
 
 *************************************************/
 
-
 /*
     PAWN MOVES
     * Pawns feature a lot of special cases like en passant and promotion
@@ -219,11 +218,20 @@ void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard 
 
     // handle en passant first
     if(enPassant){
-        Bitboard Eneast = sideToMove == WHITE ? pawnEastAttacks<BLACK>(enPassant,pawns) : pawnEastAttacks<WHITE>(enPassant,pawns);
-        Bitboard Enwest = sideToMove == WHITE ? pawnWestAttacks<BLACK>(enPassant,pawns) : pawnWestAttacks<WHITE>(enPassant,pawns);
         if(checkerRays){
-            Eneast &= checkerRays;
-            Enwest &= checkerRays;
+
+            enPassant &= checkerRays;
+            enPassant &= checkerRays;
+        }
+        Bitboard Eneast = sideToMove == WHITE ? pawnEastAttacks<BLACK>(enPassant,pawns | pins) : pawnEastAttacks<WHITE>(enPassant,pawns | pins);
+        Bitboard Enwest = sideToMove == WHITE ? pawnWestAttacks<BLACK>(enPassant,pawns | pins) : pawnWestAttacks<WHITE>(enPassant,pawns | pins);
+        // Super special case: discoverd check thru enPassant capture
+        Bitboard removedPawn = sideToMove == WHITE ? enPassant << 8 : enPassant >> 8;
+        int kingSquare = std::countr_zero(position.getPieceBitboard(sideToMove == WHITE ? wKING : bKING));
+        int kingRank = kingSquare / 8;
+        if(((getRookAttacks(kingSquare, occupied ^ (removedPawn | Enwest | Eneast)) & RANKS[kingRank]) & (position.getPieceBitboard(sideToMove == WHITE ? bROOK : wROOK) | position.getPieceBitboard(sideToMove == WHITE ? bQUEEN : wQUEEN))) && std::popcount(Eneast | Enwest) == 1){
+            Eneast = 0;
+            Enwest = 0;
         }
 
         if(Eneast){ // East enPassant possible
@@ -232,7 +240,7 @@ void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard 
 
             if(Eneast & pinns){ // Check if pinned
                 Bitboard between = extendedRayBetween[origin][std::countr_zero(position.getPieceBitboard(sideToMove == WHITE ? wKING : bKING))];
-                if(between & (1ULL << target)){
+                if(between & enPassant){
                     movelist.push_back(encodeMove(origin, target, EN_PASSANT));
                     
                 }
@@ -247,7 +255,7 @@ void generatePawnMoves(std::vector<move> &movelist, Position position, Bitboard 
 
             if(Enwest & pinns){ // Check if pinned
                 Bitboard between = extendedRayBetween[origin][std::countr_zero(position.getPieceBitboard(sideToMove == WHITE ? wKING : bKING))];
-                if(between & (1ULL << target)){
+                if(between & enPassant){
                     movelist.push_back(encodeMove(origin, target, EN_PASSANT));
                 }
             }
@@ -499,23 +507,25 @@ void generateKingMoves(std::vector<move> &movelist, Position position, Bitboard 
         movelist.push_back(encodeMove(origin, target, position.getPieceType(target) == NO_PIECE ? QUIET : CAPTURE));
     }
 
+    if(oppAttacks & king) {return;}
+
     uint8_t castelingRights = position.getCastlingRights();
 
     if (sideToMove == WHITE){
-        if(castelingRights & WHITE_OO && !(oppAttacks & 0b01110000'00000000'00000000'00000000'00000000'00000000'00000000'00000000) && !(occupied & 0b01100000'00000000'00000000'00000000'00000000'00000000'00000000'00000000)){
+        if((castelingRights & WHITE_OO) != 0 && !(oppAttacks & 0b01110000'00000000'00000000'00000000'00000000'00000000'00000000'00000000) && !(occupied & 0b01100000'00000000'00000000'00000000'00000000'00000000'00000000'00000000)){
             movelist.push_back(encodeMove(E8, G8, CASTLING));
             //std::cout << "WOO" << std::endl;
         }
-        if(castelingRights & WHITE_OOO && !(oppAttacks & 0b00011110'00000000'00000000'00000000'00000000'00000000'00000000'00000000) && !(occupied & 0b00001110'00000000'00000000'00000000'00000000'00000000'00000000'00000000)){
+        if((castelingRights & WHITE_OOO) != 0 && !(oppAttacks & 0b00011100'00000000'00000000'00000000'00000000'00000000'00000000'00000000) && !(occupied & 0b00001110'00000000'00000000'00000000'00000000'00000000'00000000'00000000)){
             movelist.push_back(encodeMove(E8, C8, CASTLING));
             //std::cout << "WOOO" << std::endl;
         }
     }else {
-        if(castelingRights & BLACK_OO && !(oppAttacks & 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'01110000) && !(occupied & 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'01100000)){
+        if((castelingRights & BLACK_OO) != 0 && !(oppAttacks & 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'01110000) && !(occupied & 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'01100000)){
             movelist.push_back(encodeMove(E1, G1, CASTLING));
             //std::cout << "BOO" << std::endl;
         }
-        if(castelingRights & BLACK_OOO && !(oppAttacks & 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'00011110) && !(occupied & 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'00001110)){
+        if((castelingRights & BLACK_OOO) != 0 && !(oppAttacks & 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'00011100) && !(occupied & 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'00001110)){
             movelist.push_back(encodeMove(E1, C1, CASTLING));
             //std::cout << "BOOO" << std::endl;
         }
@@ -652,9 +662,6 @@ Bitboard getCheckers(Position pos, Color sideToMove){
 
 
 std::vector<move> generateLegalMoves(Position &pos){
-    if(pos.getGameIsOver())
-        return {};
-
     pos.updateAllPiecesBitboard();
 
     Bitboard pins = getPinns(pos, pos.getSideToMove());
@@ -691,10 +698,14 @@ std::vector<move> generateLegalMoves(Position &pos){
         generateKingMoves(movelist,pos,attackboard);
     }
 
-    if(movelist.size() < 1) {// If there are no legal moves and the king is in check, the game is over
-        pos.setGameIsOver();
+    if(movelist.size() == 0){ // If there are no legal moves, check if the king is in check or stalemate
         if(numCheckers > 0)
-           pos.setCheckmate();
+            pos.setCheckmate(true);
+        else
+            pos.setStalemate(true);
+    }else{
+        pos.setCheckmate(false);
+        pos.setStalemate(false);
     }
 
     std::sort(movelist.begin(),movelist.end(),[](const move &a, const move &b){return getMoveType(a) > getMoveType(b);});

@@ -36,12 +36,14 @@ class Position {
         int fiftyMoveCounter;
         int repetitionCounter;
 
-        std::vector<StateInfo> stateHistory;
+        int halfMoveCounter;
 
+        std::vector<StateInfo> stateHistory;
 
         bool gameIsOver;
         bool checkmate;
-    public:
+        bool stalemate;
+public:
 
         Position(std::string fen);
         ~Position() = default;
@@ -59,11 +61,13 @@ class Position {
 
         Color getSideToMove () const { return sideToMove; };
 
-        bool getGameIsOver() const { return gameIsOver; };
-        bool getCheckmate() const { return checkmate; };
-        
-        void setGameIsOver() { this->gameIsOver = 1; };
-        void setCheckmate() { this->checkmate = 1; };
+        bool getGameIsOver () const { return gameIsOver; };
+        bool getCheckmate () const { return checkmate; };
+        bool getStalemate () const { return stalemate; };
+        int getHalfMoveCounter () const { return halfMoveCounter; };
+
+        void setCheckmate (bool checkmate) { this->checkmate = checkmate; };
+        void setStalemate (bool stalemate) { this->stalemate = stalemate; };
 
         void updateAllPiecesBitboard();
 

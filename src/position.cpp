@@ -10,6 +10,9 @@ Position::Position(std::string fen) {
 
     this->gameIsOver = false;
     this->checkmate = false;
+    this->stalemate = false;
+
+    this->halfMoveCounter = 0;
 
     // Set all pieces to 0
     for (PieceType i = wPAWN; i < NO_PIECE; i++){
@@ -187,14 +190,16 @@ void Position::makeMove(move currmove){
     int fromSquare = getFromSquare(currmove);
     int toSquare = getToSquare(currmove);
 
+    halfMoveCounter++;
+
     // Update State History
     stateHistory.push_back(StateInfo{currmove, capturedPiece, fiftyMoveCounter, repetitionCounter,enPassantSquare, castlingRights});
 
     // Update castling rights
     if (piece == wKING){
-        castlingRights &= ~(WHITE_OO | WHITE_OO);
+        castlingRights &= ~(WHITE_FULL);
     } else if (piece == bKING){
-        castlingRights &= ~(BLACK_OO | BLACK_OOO);
+        castlingRights &= ~(BLACK_FULL);
     } else if (piece == bROOK){
         if (fromSquare == A1){
             castlingRights &= ~BLACK_OOO;
@@ -314,6 +319,8 @@ void Position::undoMove(){
     int fromSquare = getFromSquare(state.lastMove);
     int toSquare = getToSquare(state.lastMove);
 
+    halfMoveCounter--;
+
     // Update castling rights
     castlingRights = state.castlingRights;
 
@@ -329,11 +336,11 @@ void Position::undoMove(){
     // Update side to move
     sideToMove = sideToMove == WHITE ? BLACK : WHITE;
 
+    checkmate = false;
+    stalemate = false;
+
     // game over
-    if(gameIsOver || checkmate){
-        gameIsOver = false;
-        checkmate = false;
-    }
+    gameIsOver = false;
 
     if (moveType == QUIET || moveType == DOUBLE_PAWN_PUSH){
         pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));

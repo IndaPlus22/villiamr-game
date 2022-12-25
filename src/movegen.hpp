@@ -11,4 +11,6 @@
 
 std::vector<move> generateLegalMoves(Position &pos);
 
+Bitboard getAttackboard(Position pos, Color generatingside);
+
 #endif
