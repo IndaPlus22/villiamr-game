@@ -7,7 +7,7 @@
 #include <thread>
 #include <fstream>
 
-void printmove(move m){
+void printmove(move m,Bitboard nodes){
 
     const std::string squares[64] = {"a8","b8","c8","d8","e8","f8","g8","h8",
                                      "a7","b7","c7","d7","e7","f7","g7","h7",
@@ -21,10 +21,10 @@ void printmove(move m){
     const std::string movetypes[] = {"QUIET", "DOUBLE_PAWN_PUSH","CASTLING","EN_PASSANT","CAPTURE","PROMOTON","PROMOTION_CAPTURE"};
 
     if(getMoveType(m) == PROMOTON || getMoveType(m) == PROMOTION_CAPTURE){
-        std::cout << squares[getFromSquare(m)] << squares[getToSquare(m)] << "q" << std::endl;
+        std::cout << squares[getFromSquare(m)] << squares[getToSquare(m)] << "q" << ": " << nodes << std::endl;
         return;
     }
-    std::cout << squares[getFromSquare(m)] << squares[getToSquare(m)] << std::endl;
+    std::cout << squares[getFromSquare(m)] << squares[getToSquare(m)] << ": " << nodes << std::endl;
 }
 
 int hojballe = 0;
@@ -39,8 +39,9 @@ Bitboard perft(int depth, Position &position){
     std::vector<move> moves = generateLegalMoves(position);
     for (move m : moves){
         position.makeMove(m);
-        printmove(m);
-        nodes += perft(depth - 1, position);
+        Bitboard n = perft(depth - 1, position);
+        if(depth == 1) printmove(m,n);
+        nodes += n;
         position.undoMove();
     }
     return nodes;
@@ -58,12 +59,14 @@ Bitboard perft(int depth, Position &position){
 
 
 int main() {
-    Position pos("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"); // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    Position pos("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/P1N2Q2/1PPBBPpP/1R2K2R b Kkq - 0 2"); // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     GraphicsBase graphics(800, 800);
     int engineDepth = 7;
     Engine engine(engineDepth);
     std::thread t;
     std::chrono::duration<double> executionTime;
+
+    std::cout << perft(1, pos) << std::endl;
 
     // //t = std::thread(&Engine::findBestMove, &engine, pos, std::ref(executionTime));
     // bool uci = true;
