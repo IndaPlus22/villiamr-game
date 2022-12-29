@@ -65,6 +65,7 @@ public:
         bool getCheckmate () const { return checkmate; };
         bool getStalemate () const { return stalemate; };
         int getHalfMoveCounter () const { return halfMoveCounter; };
+        int getRepetitionCounter () const { return repetitionCounter; };
 
         void setCheckmate (bool checkmate) { this->checkmate = checkmate; };
         void setStalemate (bool stalemate) { this->stalemate = stalemate; };

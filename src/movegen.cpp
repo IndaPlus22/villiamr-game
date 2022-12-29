@@ -703,7 +703,12 @@ std::vector<move> generateLegalMoves(Position &pos){
             pos.setCheckmate(true);
         else
             pos.setStalemate(true);
-    }else{
+    }else if (pos.getRepetitionCounter() == 6){
+        pos.setStalemate(true);
+        pos.setCheckmate(false);
+        return {};
+    }
+    else{
         pos.setCheckmate(false);
         pos.setStalemate(false);
     }

@@ -300,14 +300,6 @@ void Position::makeMove(move currmove){
 
     // Update side to move
     sideToMove = sideToMove == WHITE ? BLACK : WHITE;
-
-    if(repetitionCounter >= 6){
-        gameIsOver = true;
-    }
-
-    if(fiftyMoveCounter >= 100){
-        gameIsOver = true;
-    }
 }
 
 void Position::undoMove(){
@@ -361,7 +353,7 @@ void Position::undoMove(){
     }
 
     else if (moveType == PROMOTON){
-        pieces[piece] |= (1ULL << fromSquare);
+        pieces[sideToMove == WHITE ? wPAWN : bPAWN] |= (1ULL << fromSquare);
         if (sideToMove == WHITE){
             pieces[wQUEEN] &= ~(1ULL << toSquare);
         } else {
@@ -371,7 +363,7 @@ void Position::undoMove(){
 
     else if (moveType == PROMOTION_CAPTURE){
         pieces[capturedPiece] |= (1ULL << toSquare);
-        pieces[piece] |= (1ULL << fromSquare);
+        pieces[sideToMove == WHITE ? wPAWN : bPAWN] |= (1ULL << fromSquare);
         if (sideToMove == WHITE){
             pieces[wQUEEN] &= ~(1ULL << toSquare);
         } else {
