@@ -713,7 +713,7 @@ std::vector<move> generateLegalMoves(Position &pos){
         pos.setStalemate(false);
     }
 
-        //    std::sort(movelist.begin(),movelist.end(),[](const move &a, const move &b){return getMoveType(a) > getMoveType(b);});
+    //std::sort(movelist.begin(),movelist.end(),[](const move &a, const move &b){return getMoveType(a) > getMoveType(b);});
     return movelist;
 }
     

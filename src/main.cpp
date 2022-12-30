@@ -9,7 +9,7 @@
 
 
 
-int engineDepth = 4;
+int engineDepth = 5;
 
 // Bitboard perft(int depth, Position &position){
 //     Bitboard nodes = 0;
@@ -156,15 +156,10 @@ void uciLoop(){
 
         else if (token == "position"){
             uciPosition(input, pos);
-
-            if(t.joinable())
-                t.join();
-            t = std::thread(&Engine::findBestMove, &engine, pos , std::ref(executionTime));
         }
 
         else if (token == "go"){
-            if(t.joinable())
-                t.join();
+            engine.findBestMove(pos,executionTime);
             move bestMove = engine.getEngineMove();
             pos.makeMove(bestMove);
 
@@ -180,9 +175,9 @@ void uciLoop(){
         }
 
 
-        else if (token == "stop" || token == "quit")
+        else if (token == "stop" || token == "quit"){
             exit(EXIT_SUCCESS);
-            
+        }
         
     }
     
@@ -220,7 +215,7 @@ void uciPosition (std::string input, Position &pos){;
                         break;
                     }
                 }
-                if (input.size() <= 5) // Allows for promotion avoids infinite loop
+                 if (input.size() <= 5)
                      break;
                 input = input.substr(input.find(" ") + 1);
             }

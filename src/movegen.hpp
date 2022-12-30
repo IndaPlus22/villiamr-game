@@ -13,4 +13,8 @@ std::vector<move> generateLegalMoves(Position &pos);
 
 Bitboard getAttackboard(Position pos, Color generatingside);
 
+Bitboard getBishopAttacks(int square, Bitboard occupancy);
+
+Bitboard getRookAttacks(int square, Bitboard occupancy);
+
 #endif
