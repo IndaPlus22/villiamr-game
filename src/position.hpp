@@ -44,7 +44,7 @@ class Position {
         bool checkmate;
         bool stalemate;
 public:
-
+        Position() = default;
         Position(std::string fen);
         ~Position() = default;
 

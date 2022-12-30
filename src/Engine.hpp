@@ -21,6 +21,7 @@ private:
     int minimax(Position position ,int depth, int alpha, int beta);
 
 public:
+    Engine() = default;
     Engine(int depth);
 
     int getBestScore() const {return bestscore;};

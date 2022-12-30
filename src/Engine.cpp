@@ -6,7 +6,7 @@ Engine::Engine(int depth){
     this->bestscore = 0;
 
     srand(time(NULL));
-    for (int i = 0; i < 4; i++){
+    for(int i = 0; i < 4; i++){
         weights.push_back(rand() % 100);
     }
 }
