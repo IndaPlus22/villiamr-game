@@ -2,11 +2,27 @@
 
 Engine::Engine(int depth){
     this->maxDepth = depth;
-    this->bestMove = 0;
-    this->bestscore = 0;
-
     this->stop = false;
+    this->ply = 0;
+}
 
+void moveToString(move m)
+{
+    const std::string squares[64] = {"a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
+                                     "a7", "b7", "c7", "d7", "e7", "f7", "g7", "h7",
+                                     "a6", "b6", "c6", "d6", "e6", "f6", "g6", "h6",
+                                     "a5", "b5", "c5", "d5", "e5", "f5", "g5", "h5",
+                                     "a4", "b4", "c4", "d4", "e4", "f4", "g4", "h4",
+                                     "a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
+                                     "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
+                                     "a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1"};
+
+    if (getMoveType(m) == PROMOTON || getMoveType(m) == PROMOTION_CAPTURE)
+    {
+        std::cout << squares[getFromSquare(m)] << squares[getToSquare(m)] << "q";
+        return;
+    }
+    std::cout << squares[getFromSquare(m)] << squares[getToSquare(m)];
 }
 
 //*************************************
@@ -31,72 +47,105 @@ static const int mvv_lva[12][12] = {
 	100, 200, 300, 400, 500, 600,  100, 200, 300, 400, 500, 600
 };
 
-inline int scoreMove(move m,Position pos){
+// Killer moves - quiet moves that cause beta cutoff in search
+move killerMoves[2][64]; // ID - side , plys or halfmoves
+
+// history moves 
+move historyMoves[12][64]; // piecetype, sqares
+
+ // PV TABLE
+// Pincipal variation is most likely and perforable variation the engine wants to play
+int pvLength[64]; 
+move pvTable[64][64];
+
+bool followPV;
+bool scorePV;
+
+
+
+int scoreMove(move m,Position pos){
     MoveType type = getMoveType(m);
 
+    if(pvTable[0][pos.getHalfMoveCounter()] == m && scorePV){
+        scorePV = false;
+        return 20000;
+    }
     if (type == CAPTURE){
-        return mvv_lva[pos.getPieceType(getFromSquare(m))][pos.getPieceType(getToSquare(m))];
+        return mvv_lva[pos.getPieceType(getFromSquare(m))][pos.getPieceType(getToSquare(m))] + 10000;
     }
-    if (type == EN_PASSANT){
-        return mvv_lva[wPAWN][wPAWN];
+    else if (type == EN_PASSANT){
+        return mvv_lva[wPAWN][wPAWN] + 10000;
     }
-    return 0;
+
+    else if(killerMoves[0][pos.getHalfMoveCounter()] == m)
+        return 9000;
+
+    else if(killerMoves[1][pos.getHalfMoveCounter()] == m)
+        return 8000;    
+
+    else 
+        return historyMoves[pos.getPieceType(getFromSquare(m))][getToSquare(m)];
 }
 
-int partition(std::vector<move> &movelist,int low, int high,Position obj){
-    int pivotIDX = low + std::rand() % (high - low);
 
-    int pivVAL = scoreMove(movelist[pivotIDX],obj);
-    std::swap(movelist[pivotIDX], movelist[high]);
-
-    int storeIDX = low;
-     for (int i = low; i < high; i++) { // loop over array from low to high
-        if (scoreMove(movelist[i],obj) > pivVAL) {   // if element is smaller than pivot we sould swap it with the element at storeIndex which is the first element bigger than pivot
-            std::swap(movelist[storeIDX], movelist[i]);
-            storeIDX++;
-        }
-    }
-    std::swap(movelist[high],movelist[storeIDX]);
-
-    return storeIDX;
-}
-
-void qSort (std::vector<move> &movelist,int low, int high, Position obj){
-    if (movelist.size() < 5){
-        int i = 1;
-        while(i < movelist.size()) {
-            int x = scoreMove(movelist[i],obj);
-            int j = i - 1;
-            while (j >= 0 && scoreMove(movelist[j],obj) < x) {
-                movelist[j+1] = movelist[j];
-                j--;
-            }
-            movelist[j+1] = x;
-            i++;
-        }
-    }
-    if(low < high){
-        int pivot = partition(movelist,low,high,obj);
-        qSort(movelist,low,pivot,obj);
-        qSort(movelist, pivot+1,high,obj);
-    }
-}
-
-inline void sortMoves(std::vector<move> &movelist, Position obj){
+void sortMoves(std::vector<move> &movelist, Position obj){
     std::sort(movelist.begin(), movelist.end(),[obj](move a, move b){
         return scoreMove(a,obj) > scoreMove(b,obj);
     });
 
 }
 
+void enablePVscoring(std::vector<move> movelist,Position pos){
+    followPV = false;
+    for (move m : movelist){
+        if (pvTable[0][pos.getHalfMoveCounter()] == m){
+            followPV = true;
+            scorePV = true;
+        }
+    }
 
-void Engine::findBestMove(Position pos, std::chrono::duration<double> &executionTime){
+}
+
+void Engine::findBestMove(Position pos){
+    std::chrono::duration<double> executiontime;
     nodes = 0;
-    bestMove = generateLegalMoves(pos)[0];
-    auto start = std::chrono::high_resolution_clock::now();
-    minimax(pos, maxDepth, -INT16_MAX, INT16_MAX);
-    auto end = std::chrono::high_resolution_clock::now();
-    executionTime = end - start;
+    followPV = false;
+    scorePV = false;
+    pos.resetHalfMove();
+    memset(killerMoves,0,sizeof(killerMoves));
+    memset(historyMoves,0,sizeof(historyMoves));
+    memset(pvTable,0,sizeof(pvTable));
+    memset(pvLength,0,sizeof(pvLength));
+    
+    for (int dep = 1; dep <= maxDepth && !stop ;dep++){
+        followPV = true;
+        auto start = std::chrono::high_resolution_clock::now();
+        minimax(pos, dep, -INT16_MAX, INT16_MAX);
+        auto end = std::chrono::high_resolution_clock::now();
+        executiontime = end - start;
+
+        pos.makeMove(pvTable[0][0]);
+
+        std::cout << "info score cp " << -evaluatePosition(pos) << " nodes " << nodes << 
+                                                                            " depth " << dep << 
+                                                                            " time " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << 
+                                                                            " nps " << nodes / executiontime.count() << 
+                                                                            " pv";
+        pos.undoMove();
+
+            for (int i = 0; i < pvLength[0]; i++){
+                std::cout << " ";
+                moveToString(pvTable[0][i]);
+            }
+            
+            std::cout << std::endl;    
+    }
+    std::cout << "bestmove ";
+    moveToString(pvTable[0][0]);
+    std::cout << std::endl;
+    pos.makeMove(pvTable[0][0]);
+    
+    
 }
 
 
@@ -104,27 +153,53 @@ void Engine::findBestMove(Position pos, std::chrono::duration<double> &execution
     MINIMAX algorithm with alpha-beta pruning to find the best move
 */
 int Engine::minimax(Position pos,int depth, int alpha, int beta){
+    pvLength[pos.getHalfMoveCounter()] = pos.getHalfMoveCounter();
+    bool PVS = false; // FLAG FOR going into principal variation where range of scores can be greatly rduced alowing for more pruning ( approx 10% speedup)
+    int score;
+
     if(stop) return 0;
     if( depth == 0 ) return quiesce(pos,alpha,beta);
 
     // SORTING MOVES
     std::vector<move> moves = generateLegalMoves(pos);
+    if(followPV)
+        enablePVscoring(moves,pos);
+
     sortMoves(moves,pos);
+
     for ( move m : moves ) {
         pos.makeMove(m);
         nodes++;
-        int score = -minimax(pos,depth-1, -beta, -alpha);
+        if(PVS){
+            score = -minimax(pos,depth-1,-alpha -1, -alpha);
+            if((score > alpha) && (score < beta)) // IF PVS FAILS
+                score = -minimax(pos,depth-1, -beta, -alpha);
+        }
+        else
+            score = -minimax(pos,depth-1, -beta, -alpha);
         pos.undoMove();
-        if( score >= beta )
+        if( score >= beta ){
+            if(getMoveType(m) != CAPTURE && getMoveType(m) != PROMOTION_CAPTURE){
+                killerMoves[1][pos.getHalfMoveCounter()] = killerMoves[0][pos.getHalfMoveCounter()];
+                killerMoves[0][pos.getHalfMoveCounter()] = m;
+            }
             return beta;   //  fail hard beta-cutoff
+        }
         if( score > alpha ){
             alpha = score; // alpha acts like max in MiniMax
+            PVS = true;
 
-            
-            if (depth == maxDepth){
-                bestscore = score;
-                bestMove = m;
+            // ADD PV MOVE TO PV TABLE
+            pvTable[pos.getHalfMoveCounter()][pos.getHalfMoveCounter()] = m;
+            // copy deeper moves to current ply
+            for (int p = pos.getHalfMoveCounter() + 1; p < pvLength[pos.getHalfMoveCounter() + 1]; p++){
+                pvTable[pos.getHalfMoveCounter()][p] = pvTable[pos.getHalfMoveCounter() + 1][p];
             }
+
+            pvLength[pos.getHalfMoveCounter()] = pvLength[pos.getHalfMoveCounter() + 1];
+
+            if(getMoveType(m) != CAPTURE && getMoveType(m) != PROMOTION_CAPTURE)
+                historyMoves[pos.getPieceType(getFromSquare(m))][getToSquare(m)] += depth;
         }
     }
     if(pos.getCheckmate()){ // NEED TO ADD PLY?
@@ -136,6 +211,7 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
 }
 
 int Engine::quiesce(Position pos, int alpha, int beta){
+    pvLength[pos.getHalfMoveCounter()] = pos.getHalfMoveCounter();
     int stand_pat = evaluatePosition(pos);
     if( stand_pat >= beta )
         return beta;

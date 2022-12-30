@@ -2,6 +2,7 @@
 #define ENGINE_HPP
 
 #include <chrono>
+#include <cstring>
 #include "position.hpp"
 #include "movegen.hpp"
 
@@ -9,9 +10,6 @@
 class Engine{
 private:
     int maxDepth;
-    int bestscore;
-
-    move bestMove;
     Bitboard nodes;
 
     int quiesce(Position pos,int alpha, int beta);
@@ -23,10 +21,11 @@ public:
     Engine() = default;
     Engine(int depth);
 
-    int getBestScore() const {return bestscore;};
+   
+    int ply;
 
-    void findBestMove(Position position, std::chrono::duration<double> &executionTime);
-    move getEngineMove() const {return bestMove;};
+
+    void findBestMove(Position position);
     Bitboard getNodes() const {return nodes;};
 
     void setStop(bool stop) {this->stop = stop;};
