@@ -177,6 +177,17 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
          depth++;
     }
 
+    // NULL MOVE PRUNING
+    if(!inCheck && depth >= reductionLimit && pos.getHalfMoveCounter()){
+        pos.toggleSideToMove();
+        pos.nullEnPassantSquare();
+        score = -minimax(pos,depth-3,-beta,-beta+1);
+        pos.toggleSideToMove();
+        if(score >= beta)
+            return beta;
+    }
+
+
     // SORTING MOVES
     std::vector<move> moves = generateLegalMoves(pos);
     if(followPV)

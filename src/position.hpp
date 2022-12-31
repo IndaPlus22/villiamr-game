@@ -57,6 +57,7 @@ public:
         Bitboard getOccupiedSquaresBitboard () const { return this->occupiedSquares; };
 
         Bitboard getEnpassantSquare () const { return this->enPassantSquare; };
+        void nullEnPassantSquare () { this->enPassantSquare = 0; };
         uint8_t getCastlingRights () const { return castlingRights; };
 
         Color getSideToMove () const { return sideToMove; };
@@ -71,6 +72,7 @@ public:
         void setCheckmate (bool checkmate) { this->checkmate = checkmate; };
         void setStalemate (bool stalemate) { this->stalemate = stalemate; };
         void resetHalfMove() {this->halfMoveCounter = 0;}
+        void toggleSideToMove() {this->sideToMove = (this->sideToMove == WHITE) ? BLACK : WHITE;};
 
         void updateAllPiecesBitboard();
 
