@@ -48,7 +48,7 @@ static const int mvv_lva[12][12] = {
 };
 
 // Killer moves - quiet moves that cause beta cutoff in search
-move killerMoves[2][64]; // ID - side , plys or halfmoves
+move killerMoves[2][64]; // ID , plys or halfmoves
 
 // history moves 
 move historyMoves[12][64]; // piecetype, sqares
@@ -60,6 +60,7 @@ move pvTable[64][64];
 
 bool followPV;
 bool scorePV;
+const int maxPly = 64;
 
 
 
@@ -106,6 +107,8 @@ void enablePVscoring(std::vector<move> movelist,Position pos){
 
 }
 
+
+int ply;
 void Engine::findBestMove(Position pos){
     std::chrono::duration<double> executiontime;
     nodes = 0;
@@ -152,13 +155,27 @@ void Engine::findBestMove(Position pos){
 /*  
     MINIMAX algorithm with alpha-beta pruning to find the best move
 */
+const int fullDepthMoves = 4;
+const int reductionLimit = 3;
 int Engine::minimax(Position pos,int depth, int alpha, int beta){
+    if(stop) return 0;
+    if( depth == 0 ) return quiesce(pos,alpha,beta);
+
+    if(pos.getHalfMoveCounter() >= 63){
+        return evaluatePosition(pos);
+    }
+
     pvLength[pos.getHalfMoveCounter()] = pos.getHalfMoveCounter();
     bool PVS = false; // FLAG FOR going into principal variation where range of scores can be greatly rduced alowing for more pruning ( approx 10% speedup)
     int score;
 
-    if(stop) return 0;
-    if( depth == 0 ) return quiesce(pos,alpha,beta);
+
+
+    bool inCheck = getCheckers(pos,pos.getSideToMove()); // Bitboard used as a boolean value
+
+    if(inCheck){ // If check we need to go deeper
+         depth++;
+    }
 
     // SORTING MOVES
     std::vector<move> moves = generateLegalMoves(pos);
@@ -166,6 +183,7 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
         enablePVscoring(moves,pos);
 
     sortMoves(moves,pos);
+    int searchedMoves = 0;
 
     for ( move m : moves ) {
         pos.makeMove(m);
@@ -175,9 +193,29 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
             if((score > alpha) && (score < beta)) // IF PVS FAILS
                 score = -minimax(pos,depth-1, -beta, -alpha);
         }
-        else
-            score = -minimax(pos,depth-1, -beta, -alpha);
+        else{ // MOVES BEFORE 86548
+            // Full depth
+            if(searchedMoves == 0)
+                score = -minimax(pos,depth-1, -beta, -alpha);
+            // LATE MOVE REDUCTION
+            else {
+                if(searchedMoves >= fullDepthMoves && depth >= reductionLimit && !inCheck && getMoveType(m) != CAPTURE && getMoveType(m) != PROMOTON && getMoveType(m) != PROMOTION_CAPTURE){
+                    score = -minimax(pos,depth -2,-alpha-1,-alpha);
+                }
+                else 
+                    score = alpha +1;
+                
+                // if we find a better move at the bottom of movelist
+                if(score > alpha){
+                    score = -minimax(pos,depth-1,-alpha -1,-alpha);
+                    if(score > alpha && score < beta){
+                        score = -minimax(pos,depth-1,-beta,-alpha);
+                    }
+                }
+            }
+        }
         pos.undoMove();
+        searchedMoves++;
         if( score >= beta ){
             if(getMoveType(m) != CAPTURE && getMoveType(m) != PROMOTION_CAPTURE){
                 killerMoves[1][pos.getHalfMoveCounter()] = killerMoves[0][pos.getHalfMoveCounter()];
@@ -200,6 +238,7 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
 
             if(getMoveType(m) != CAPTURE && getMoveType(m) != PROMOTION_CAPTURE)
                 historyMoves[pos.getPieceType(getFromSquare(m))][getToSquare(m)] += depth;
+            
         }
     }
     if(pos.getCheckmate()){ // NEED TO ADD PLY?
@@ -211,7 +250,6 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
 }
 
 int Engine::quiesce(Position pos, int alpha, int beta){
-    pvLength[pos.getHalfMoveCounter()] = pos.getHalfMoveCounter();
     int stand_pat = evaluatePosition(pos);
     if( stand_pat >= beta )
         return beta;

@@ -189,7 +189,6 @@ void uciPosition(std::string input, Position &pos){
             {
                 if (getFromSquare(m) == from && getToSquare(m) == to)
                 {
-                    std::cout << "move made" << std::endl;
                     pos.makeMove(m);
                     break;
                 }

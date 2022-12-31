@@ -17,4 +17,6 @@ Bitboard getBishopAttacks(int square, Bitboard occupancy);
 
 Bitboard getRookAttacks(int square, Bitboard occupancy);
 
+Bitboard getCheckers(Position pos, Color sideToMove);
+
 #endif

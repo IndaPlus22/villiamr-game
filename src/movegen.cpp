@@ -54,6 +54,11 @@ Bitboard pawnWestAttacks (Bitboard pawns, Bitboard enemy){
     return color == WHITE ? ((pawns & ~FILE_A) >> 9) & enemy : ((pawns & ~FILE_A) << 7) & enemy;
 }
 
+template<Color color>
+Bitboard pawnAttacks (Bitboard pawns,Bitboard enemy){
+    return (pawnWestAttacks<color>(pawns,enemy)) | (pawnEastAttacks<color>(pawns,enemy));
+}
+
 /*
     LOOKUP TABLES for rays between two squares
 */
@@ -713,7 +718,27 @@ std::vector<move> generateLegalMoves(Position &pos){
         pos.setStalemate(false);
     }
 
-    //std::sort(movelist.begin(),movelist.end(),[](const move &a, const move &b){return getMoveType(a) > getMoveType(b);});
     return movelist;
+}
+
+//* HELPERS
+bool isSquareAttacked(int sq, Position pos){
+    Color side = pos.getSideToMove();
+    Color opp = side == WHITE ? BLACK : WHITE;
+
+    if(side == WHITE && pawnAttacks<BLACK>(pos.getPieceBitboard(opp == WHITE ? wPAWN : bPAWN), pos.getAllPiecesBitboard(side)) & (1ULL << sq)) return true;
+
+    else if ( side == BLACK && pawnAttacks<WHITE>(pos.getPieceBitboard(opp == WHITE ? wPAWN : bPAWN), pos.getAllPiecesBitboard(side)) & (1ULL << sq)) return true;
+
+    else if (KNIGHT_ATTACKS[sq] & pos.getPieceBitboard(side == WHITE ? bKNIGHT : wKNIGHT)) return true;
+
+    else if (getRookAttacks(sq,pos.getOccupiedSquaresBitboard()) & (pos.getPieceBitboard(side == WHITE ? bROOK : wROOK) | pos.getPieceBitboard(side == WHITE ? bQUEEN : wQUEEN))) return true;
+
+    else if (getBishopAttacks(sq,pos.getOccupiedSquaresBitboard()) & (pos.getPieceBitboard(side == WHITE ? bROOK : wROOK) | pos.getPieceBitboard(side == WHITE ? bQUEEN : wQUEEN))) return true;
+    
+    else if (kingAttacks[sq] & pos.getPieceBitboard(side == WHITE ? bKING: wKING)) return true;
+
+    return false;
+
 }
     
