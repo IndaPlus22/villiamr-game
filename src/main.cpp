@@ -2,6 +2,7 @@
 #include "graphicsBase.hpp"
 #include "movegen.hpp"
 #include "Engine.hpp"
+#include "zobrist.hpp"
 #include <SDL2/SDL.h>
 #include <chrono>
 #include <thread>
@@ -108,6 +109,7 @@ void uciPosition(std::string input, Position &pos);
 void uciLoop()
 {
     std::string input;
+    Zobrist zobrist = Zobrist();
     Position pos;
     Engine engine(engineDepth);
 
@@ -136,6 +138,7 @@ void uciLoop()
         else if (token == "position")
         {
             uciPosition(input, pos);
+            std::cout << zobrist.generateHash(pos) << std::endl;
         }
 
         else if (token == "go")
@@ -160,17 +163,17 @@ void uciPosition(std::string input, Position &pos){
     // SET UP POSITION
     if (option == "startpos")
     {
-        pos = Position(startpos);
+        pos.setFen(startpos);
     }
     else if (option == "tricky")
     {
-        pos = Position(tricky);
+        pos.setFen(tricky);
     }
     else if (option == "fen")
     {
         input = input.substr(input.find("fen") + 4);
         std::string fen = input.substr(0, input.find("moves"));
-        pos = Position(fen);
+        pos.setFen(fen);
     }
 
     // PARSE MOVES

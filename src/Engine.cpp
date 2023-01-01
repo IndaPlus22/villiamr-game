@@ -3,8 +3,6 @@
 Engine::Engine(int depth){
     this->maxDepth = depth;
     this->stop = false;
-
-    this->zobrist = Zobrist();
 }
 
 void moveToString(move m)

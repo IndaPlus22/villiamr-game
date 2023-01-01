@@ -15,6 +15,7 @@ class Zobrist {
         Zobrist();
         ~Zobrist() = default;
 
+        Bitboard generateHash(Position position);
 };
 
 #endif

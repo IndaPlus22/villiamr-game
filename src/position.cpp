@@ -7,8 +7,26 @@
 */
 Position::Position(std::string fen) {
     // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" DEFAULT FEN
+    setFen(fen);
 
-    this->gameIsOver = false;
+}
+
+void Position::printBoard(Bitboard board){
+    for (int i = 0; i < 64; i++){
+        if (board & (1ULL << i)){
+            std::cout << "1 ";
+        } else {
+            std::cout << "0 ";
+        }
+        if (i % 8 == 7){
+            std::cout << std::endl;
+        }
+    }
+    std::cout << std::endl;
+}
+
+void Position::setFen(std::string fen){
+        this->gameIsOver = false;
     this->checkmate = false;
     this->stalemate = false;
 
@@ -161,20 +179,6 @@ Position::Position(std::string fen) {
     this->fiftyMoveCounter = std::stoi(halfmoveClockString);
 
     this->repetitionCounter = 0;
-}
-
-void Position::printBoard(Bitboard board){
-    for (int i = 0; i < 64; i++){
-        if (board & (1ULL << i)){
-            std::cout << "1 ";
-        } else {
-            std::cout << "0 ";
-        }
-        if (i % 8 == 7){
-            std::cout << std::endl;
-        }
-    }
-    std::cout << std::endl;
 }
 
 void Position::printEnPassantBoard(){

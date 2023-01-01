@@ -48,6 +48,8 @@ public:
         Position(std::string fen);
         ~Position() = default;
 
+        void setFen(std::string fen);
+
         void makeMove(move m);
         void undoMove();
 

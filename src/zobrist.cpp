@@ -51,3 +51,29 @@ Zobrist::Zobrist() {
 
     usedKeys.push_back(zobristSideToMove);
 }
+
+Bitboard Zobrist::generateHash(Position position) {
+    Bitboard hash = 0;
+
+    Bitboard pieceBB;
+    for (PieceType p = wPAWN; p < NO_PIECE; p++) {
+        pieceBB = position.getPieceBitboard(p);
+        while (pieceBB) {
+            int square = std::countr_zero(pieceBB);
+            pieceBB ^= (1ULL << square);
+            hash ^= zobristKeys[p][square];
+        }
+    }
+
+    if (position.getEnpassantSquare()) {
+        hash ^= zobristEnPassant[std::countr_zero(position.getEnpassantSquare())];
+    }
+
+    hash ^= zobristCastling[position.getCastlingRights()];
+
+    if (position.getSideToMove() == BLACK) {
+        hash ^= zobristSideToMove;
+    }
+
+    return hash;
+}
