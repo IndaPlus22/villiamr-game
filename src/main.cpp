@@ -145,7 +145,7 @@ void uciLoop()
 
         else if (token == "stop" || token == "quit")
         {
-            exit(EXIT_SUCCESS);
+            uci = false;
         }
     }
 }

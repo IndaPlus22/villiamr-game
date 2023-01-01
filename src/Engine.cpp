@@ -3,7 +3,8 @@
 Engine::Engine(int depth){
     this->maxDepth = depth;
     this->stop = false;
-    this->ply = 0;
+
+    this->zobrist = Zobrist();
 }
 
 void moveToString(move m)
@@ -24,6 +25,7 @@ void moveToString(move m)
     }
     std::cout << squares[getFromSquare(m)] << squares[getToSquare(m)];
 }
+
 
 //*************************************
 // MOVE SORTING
@@ -90,10 +92,30 @@ int scoreMove(move m,Position pos){
 
 
 void sortMoves(std::vector<move> &movelist, Position obj){
-    std::sort(movelist.begin(), movelist.end(),[obj](move a, move b){
-        return scoreMove(a,obj) > scoreMove(b,obj);
-    });
+    int moveScores[movelist.size()];
 
+    for (int i = 0; i < movelist.size(); i++){
+        moveScores[i] = scoreMove(movelist[i],obj);
+    }
+
+    //Sort the moves by putting all zero scores at the end and then sorting the rest
+    int zeroIndex = 0;
+    for(int i = 0; i < movelist.size(); i++){
+        if(moveScores[i] != 0){
+            std::swap(movelist[i],movelist[zeroIndex]);
+            std::swap(moveScores[i],moveScores[zeroIndex]);
+            zeroIndex++;
+        }
+    }
+    
+    for (int i = 0; i < zeroIndex; i++){
+        for (int j = i+1; j < zeroIndex; j++){
+            if (moveScores[i] < moveScores[j]){
+                std::swap(movelist[i],movelist[j]);
+                std::swap(moveScores[i],moveScores[j]);
+            }
+        }
+    }
 }
 
 void enablePVscoring(std::vector<move> movelist,Position pos){
@@ -107,8 +129,6 @@ void enablePVscoring(std::vector<move> movelist,Position pos){
 
 }
 
-
-int ply;
 void Engine::findBestMove(Position pos){
     std::chrono::duration<double> executiontime;
     nodes = 0;
@@ -119,22 +139,36 @@ void Engine::findBestMove(Position pos){
     memset(historyMoves,0,sizeof(historyMoves));
     memset(pvTable,0,sizeof(pvTable));
     memset(pvLength,0,sizeof(pvLength));
+
+    int alpha = -50000;
+    int beta = 50000;
     
     for (int dep = 1; dep <= maxDepth && !stop ;dep++){
         followPV = true;
         auto start = std::chrono::high_resolution_clock::now();
-        minimax(pos, dep, -INT16_MAX, INT16_MAX);
+
+        int score = minimax(pos, dep, alpha, beta);
+        
         auto end = std::chrono::high_resolution_clock::now();
         executiontime = end - start;
 
-        pos.makeMove(pvTable[0][0]);
+        // Aspiration window
+        if(score <= alpha || score >= beta){ // if score is out of bounds we have to do costly re-search
+            alpha = -50000;
+            beta = 50000;
+            dep--;
+            continue;
+        }
+        alpha = score - 50;
+        beta = score + 50;
+        
+           
 
-        std::cout << "info score cp " << -evaluatePosition(pos) << " nodes " << nodes << 
+        std::cout << "info score cp " << score << " nodes " << nodes << 
                                                                             " depth " << dep << 
                                                                             " time " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << 
                                                                             " nps " << nodes / executiontime.count() << 
                                                                             " pv";
-        pos.undoMove();
 
             for (int i = 0; i < pvLength[0]; i++){
                 std::cout << " ";
@@ -157,32 +191,32 @@ void Engine::findBestMove(Position pos){
 */
 const int fullDepthMoves = 4;
 const int reductionLimit = 3;
+bool nullPruning = false;
 int Engine::minimax(Position pos,int depth, int alpha, int beta){
-    if(stop) return 0;
     if( depth == 0 ) return quiesce(pos,alpha,beta);
 
-    if(pos.getHalfMoveCounter() >= 63){
+    if(pos.getHalfMoveCounter() >= 63){ // Protect against going too deep in precence of perpetual check
         return evaluatePosition(pos);
     }
 
     pvLength[pos.getHalfMoveCounter()] = pos.getHalfMoveCounter();
-    bool PVS = false; // FLAG FOR going into principal variation where range of scores can be greatly rduced alowing for more pruning ( approx 10% speedup)
     int score;
 
 
-
+    // INCREASE DEPTH IF IN CHECK
     bool inCheck = getCheckers(pos,pos.getSideToMove()); // Bitboard used as a boolean value
-
     if(inCheck){ // If check we need to go deeper
          depth++;
     }
 
     // NULL MOVE PRUNING
-    if(!inCheck && depth >= reductionLimit && pos.getHalfMoveCounter()){
+    if(!inCheck && depth >= reductionLimit && pos.getHalfMoveCounter()){ // Don't prune if in root or check
+        nullPruning = true; 
         pos.toggleSideToMove();
         pos.nullEnPassantSquare();
         score = -minimax(pos,depth-3,-beta,-beta+1);
         pos.toggleSideToMove();
+        nullPruning = false;
         if(score >= beta)
             return beta;
     }
@@ -192,61 +226,64 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
     std::vector<move> moves = generateLegalMoves(pos);
     if(followPV)
         enablePVscoring(moves,pos);
-
     sortMoves(moves,pos);
+
     int searchedMoves = 0;
 
     for ( move m : moves ) {
         pos.makeMove(m);
         nodes++;
-        if(PVS){
-            score = -minimax(pos,depth-1,-alpha -1, -alpha);
-            if((score > alpha) && (score < beta)) // IF PVS FAILS
-                score = -minimax(pos,depth-1, -beta, -alpha);
-        }
-        else{ // MOVES BEFORE 86548
-            // Full depth
-            if(searchedMoves == 0)
-                score = -minimax(pos,depth-1, -beta, -alpha);
-            // LATE MOVE REDUCTION
-            else {
-                if(searchedMoves >= fullDepthMoves && depth >= reductionLimit && !inCheck && getMoveType(m) != CAPTURE && getMoveType(m) != PROMOTON && getMoveType(m) != PROMOTION_CAPTURE){
-                    score = -minimax(pos,depth -2,-alpha-1,-alpha);
-                }
-                else 
-                    score = alpha +1;
-                
-                // if we find a better move at the bottom of movelist
-                if(score > alpha){
-                    score = -minimax(pos,depth-1,-alpha -1,-alpha);
-                    if(score > alpha && score < beta){
-                        score = -minimax(pos,depth-1,-beta,-alpha);
-                    }
+
+        // LATE MOVE REDUCTION (LMR)
+       
+        // Full depth
+        if(searchedMoves == 0)
+            score = -minimax(pos,depth-1, -beta, -alpha);
+        // LATE MOVE REDUCTION
+        else {
+            if(searchedMoves >= fullDepthMoves && depth >= reductionLimit && !inCheck && getMoveType(m) != CAPTURE && getMoveType(m) != PROMOTON && getMoveType(m) != PROMOTION_CAPTURE){
+                score = -minimax(pos,depth -2,-alpha-1,-alpha);
+            }
+            else 
+                score = alpha +1; // Hack that forces a full search if LMR fails
+            
+            // PRIINCIPAL VARIATION SEARCH
+            if(score > alpha){
+                score = -minimax(pos,depth-1,-alpha -1,-alpha); // Full search reduced bandwith
+                if(score > alpha && score < beta){
+                    score = -minimax(pos,depth-1,-beta,-alpha); // If all lmrs fail do a full search
                 }
             }
         }
+        
         pos.undoMove();
         searchedMoves++;
+
         if( score >= beta ){
+            //KILLER MOVE HEURISTIC
             if(getMoveType(m) != CAPTURE && getMoveType(m) != PROMOTION_CAPTURE){
                 killerMoves[1][pos.getHalfMoveCounter()] = killerMoves[0][pos.getHalfMoveCounter()];
                 killerMoves[0][pos.getHalfMoveCounter()] = m;
             }
+
             return beta;   //  fail hard beta-cutoff
         }
         if( score > alpha ){
             alpha = score; // alpha acts like max in MiniMax
-            PVS = true;
+            
 
-            // ADD PV MOVE TO PV TABLE
-            pvTable[pos.getHalfMoveCounter()][pos.getHalfMoveCounter()] = m;
-            // copy deeper moves to current ply
-            for (int p = pos.getHalfMoveCounter() + 1; p < pvLength[pos.getHalfMoveCounter() + 1]; p++){
-                pvTable[pos.getHalfMoveCounter()][p] = pvTable[pos.getHalfMoveCounter() + 1][p];
+            // PRINCIPAL VARIATION TABLE
+            if(!nullPruning){ // Only allow pv moves if not in null move pruning
+                pvTable[pos.getHalfMoveCounter()][pos.getHalfMoveCounter()] = m;
+                // copy deeper moves to current ply
+                for (int p = pos.getHalfMoveCounter() + 1; p < pvLength[pos.getHalfMoveCounter() + 1]; p++){
+                    pvTable[pos.getHalfMoveCounter()][p] = pvTable[pos.getHalfMoveCounter() + 1][p];
+                }
+
+                pvLength[pos.getHalfMoveCounter()] = pvLength[pos.getHalfMoveCounter() + 1];
             }
 
-            pvLength[pos.getHalfMoveCounter()] = pvLength[pos.getHalfMoveCounter() + 1];
-
+            // HISTORY HEURISTIC
             if(getMoveType(m) != CAPTURE && getMoveType(m) != PROMOTION_CAPTURE)
                 historyMoves[pos.getPieceType(getFromSquare(m))][getToSquare(m)] += depth;
             
@@ -269,7 +306,7 @@ int Engine::quiesce(Position pos, int alpha, int beta){
     std::vector<move> moves = generateLegalMoves(pos);
     sortMoves(moves,pos);
     for ( move m : moves ) {
-        if ((getMoveType(m) == CAPTURE)){
+        if ((getMoveType(m) == CAPTURE) || getMoveType(m) == PROMOTION_CAPTURE){
             pos.makeMove(m);
             nodes++;
             int score = -quiesce( pos ,-beta, -alpha );

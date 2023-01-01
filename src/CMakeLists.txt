@@ -3,8 +3,8 @@ include(FindPkgConfig)
 PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
 PKG_SEARCH_MODULE(SDL2_IMAGE REQUIRED SDL2_image)
 
-set(SOURCES main.cpp position.cpp graphicsBase.cpp movegen.cpp Engine.cpp)
-set(HEADERS types.hpp position.hpp graphicsBase.hpp magicConstants.hpp movegen.hpp Engine.hpp)
+set(SOURCES main.cpp position.cpp graphicsBase.cpp movegen.cpp Engine.cpp zobrist.cpp)
+set(HEADERS types.hpp position.hpp graphicsBase.hpp magicConstants.hpp movegen.hpp Engine.hpp zobrist.hpp)
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})
 

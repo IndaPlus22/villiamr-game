@@ -5,10 +5,13 @@
 #include <cstring>
 #include "position.hpp"
 #include "movegen.hpp"
+#include "zobrist.hpp"
 
 
 class Engine{
 private:
+    Zobrist zobrist;
+
     int maxDepth;
     Bitboard nodes;
 
@@ -22,7 +25,6 @@ public:
     Engine(int depth);
 
    
-    int ply;
 
 
     void findBestMove(Position position);
