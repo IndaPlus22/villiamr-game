@@ -3,7 +3,9 @@
 
 #include <vector>
 #include <iostream>
+#include <random>
 #include "types.hpp"
+
 
 
 /*
@@ -12,6 +14,8 @@
 typedef struct stateInfo {
     move lastMove;
     PieceType capturedPiece;
+
+    Bitboard hash;
 
     int fiftyMoveCounter;
     int repetitionCounter;
@@ -25,9 +29,12 @@ typedef struct stateInfo {
 
 class Position {
     private:
+        ZobristKeys keys;
+
         Bitboard pieces[12];
         Bitboard allPieces[2];
         Bitboard occupiedSquares;
+        Bitboard hash;
 
         Color sideToMove;
         uint8_t castlingRights;
@@ -43,8 +50,10 @@ class Position {
         bool gameIsOver;
         bool checkmate;
         bool stalemate;
+
+        void initHashKeys();
 public:
-        Position() = default;
+        Position();
         Position(std::string fen);
         ~Position() = default;
 
@@ -53,13 +62,16 @@ public:
         void makeMove(move m);
         void undoMove();
 
+        Bitboard hashPosition();
+
+        Bitboard getHash() const { return this->hash; };
 
         Bitboard getPieceBitboard (PieceType piece) const { return this->pieces[piece]; };
         Bitboard getAllPiecesBitboard (Color color) const { return this->allPieces[color]; };
         Bitboard getOccupiedSquaresBitboard () const { return this->occupiedSquares; };
 
         Bitboard getEnpassantSquare () const { return this->enPassantSquare; };
-        void nullEnPassantSquare () { this->enPassantSquare = 0; };
+        void setEnpassantSquare (Bitboard enp) { this->enPassantSquare = enp; };
         uint8_t getCastlingRights () const { return castlingRights; };
 
         Color getSideToMove () const { return sideToMove; };

@@ -2,13 +2,12 @@
 #include "graphicsBase.hpp"
 #include "movegen.hpp"
 #include "Engine.hpp"
-#include "zobrist.hpp"
 #include <SDL2/SDL.h>
 #include <chrono>
 #include <thread>
 #include <fstream>
 
-int engineDepth = 7;
+int engineDepth = 10;
 
 // Bitboard perft(int depth, Position &position){
 //     Bitboard nodes = 0;
@@ -109,8 +108,7 @@ void uciPosition(std::string input, Position &pos);
 void uciLoop()
 {
     std::string input;
-    Zobrist zobrist = Zobrist();
-    Position pos;
+    Position pos = Position();
     Engine engine(engineDepth);
 
     std::thread t;
@@ -138,7 +136,6 @@ void uciLoop()
         else if (token == "position")
         {
             uciPosition(input, pos);
-            std::cout << zobrist.generateHash(pos) << std::endl;
         }
 
         else if (token == "go")
@@ -175,6 +172,8 @@ void uciPosition(std::string input, Position &pos){
         std::string fen = input.substr(0, input.find("moves"));
         pos.setFen(fen);
     }
+
+    std::cout << "Original Hash: " << pos.getHash() << std::endl;
 
     // PARSE MOVES
     if (input.find("moves") != std::string::npos)

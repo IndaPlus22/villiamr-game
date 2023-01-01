@@ -5,7 +5,6 @@
 #include <cstring>
 #include "position.hpp"
 #include "movegen.hpp"
-#include "zobrist.hpp"
 
 
 class Engine{

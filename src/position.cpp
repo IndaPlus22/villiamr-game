@@ -5,10 +5,66 @@
 /*
     Position constructor intitializes boardstate from a FEN string.
 */
+Position::Position(){
+    initHashKeys();
+}
+
 Position::Position(std::string fen) {
     // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" DEFAULT FEN
     setFen(fen);
 
+}
+
+std::vector<Bitboard> usedKeys = {};
+
+bool isKeyUsed(Bitboard key) {
+    for (Bitboard usedKey : usedKeys) {
+        if (usedKey == key) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void Position::initHashKeys(){
+    std::random_device rd;
+    std::mt19937_64 gen(rd());
+    std::uniform_int_distribution<Bitboard> dis;
+
+    for (int i = 0; i < 12; i++) {
+        for (int j = 0; j < 64; j++) {
+            keys.zobristKeys[i][j] = dis(gen);
+            if(isKeyUsed(keys.zobristKeys[i][j])){
+                j--;
+            }else{
+                usedKeys.push_back(keys.zobristKeys[i][j]);
+            }
+        }
+    }
+
+    for (int i = 0; i < 64; i++) {
+        keys.zobristEnPassant[i] = dis(gen);
+        if(isKeyUsed(keys.zobristEnPassant[i])){
+            i--;
+        }else{
+            usedKeys.push_back(keys.zobristEnPassant[i]); 
+        }     
+    }
+
+    for (int i = 0; i < 16; i++) {
+        keys.zobristCastling[i] = dis(gen);
+        if(isKeyUsed(keys.zobristCastling[i])){
+            i--;
+        }else{
+            usedKeys.push_back(keys.zobristCastling[i]);
+        }
+    }
+
+    do{
+        keys.zobristSideToMove = dis(gen);
+    } while (isKeyUsed(keys.zobristSideToMove));
+
+    usedKeys.push_back(keys.zobristSideToMove);
 }
 
 void Position::printBoard(Bitboard board){
@@ -179,12 +235,39 @@ void Position::setFen(std::string fen){
     this->fiftyMoveCounter = std::stoi(halfmoveClockString);
 
     this->repetitionCounter = 0;
+
+    hash = hashPosition();
 }
 
 void Position::printEnPassantBoard(){
     printBoard(enPassantSquare);
 }
 
+Bitboard Position::hashPosition(){
+    Bitboard hash = 0;
+
+    Bitboard pieceBB;
+    for (PieceType p = wPAWN; p < NO_PIECE; p++) {
+        pieceBB = pieces[p];
+        while (pieceBB) {
+            int square = std::countr_zero(pieceBB);
+            pieceBB ^= (1ULL << square);
+            hash ^= keys.zobristKeys[p][square];
+        }
+    }
+
+    if (enPassantSquare) {
+        hash ^= keys.zobristEnPassant[std::countr_zero(enPassantSquare)];
+    }
+
+    hash ^= keys.zobristCastling[castlingRights];
+
+    if (sideToMove == BLACK) {
+        hash ^= keys.zobristSideToMove;
+    }
+
+    return hash;
+}
 
 void Position::makeMove(move currmove){
     PieceType piece = getPieceType(getFromSquare(currmove));
@@ -197,9 +280,122 @@ void Position::makeMove(move currmove){
     halfMoveCounter++;
 
     // Update State History
-    stateHistory.push_back(StateInfo{currmove, capturedPiece, fiftyMoveCounter, repetitionCounter,enPassantSquare, castlingRights});
+    stateHistory.push_back(StateInfo{currmove, capturedPiece, hash, fiftyMoveCounter, repetitionCounter,enPassantSquare, castlingRights});
 
-    // Update castling rights
+    hash ^= keys.zobristKeys[piece][fromSquare];
+    hash ^= keys.zobristKeys[piece][toSquare];
+
+    // Update position
+    if (moveType == QUIET || moveType == DOUBLE_PAWN_PUSH){
+        pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
+    }
+
+    else if (moveType == CAPTURE){
+        pieces[capturedPiece] &= ~(1ULL << toSquare);
+        pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
+
+        hash ^= keys.zobristKeys[capturedPiece][toSquare];
+    }
+
+    else if (moveType == EN_PASSANT){
+        pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
+        if(sideToMove == WHITE){
+            pieces[bPAWN] &= ~(1ULL << (toSquare + 8));
+
+            hash ^= keys.zobristKeys[bPAWN][toSquare + 8];
+        } else {
+            pieces[wPAWN] &= ~(1ULL << (toSquare - 8));
+
+            hash ^= keys.zobristKeys[wPAWN][toSquare - 8];
+        }
+    }
+
+    else if (moveType == PROMOTON){
+        pieces[piece] &= ~(1ULL << fromSquare);
+
+        hash ^= keys.zobristKeys[piece][toSquare];
+        if (sideToMove == WHITE){
+            pieces[wQUEEN] |= (1ULL << toSquare);
+
+            hash ^= keys.zobristKeys[wQUEEN][toSquare];
+        } else {
+            pieces[bQUEEN] |= (1ULL << toSquare);
+
+            hash ^= keys.zobristKeys[bQUEEN][toSquare];
+        }
+    }
+
+    else if (moveType == PROMOTION_CAPTURE){
+        pieces[capturedPiece] &= ~(1ULL << toSquare);
+        pieces[piece] &= ~(1ULL << fromSquare);
+
+        hash ^= keys.zobristKeys[capturedPiece][toSquare];
+        hash ^= keys.zobristKeys[piece][toSquare];
+        if (sideToMove == WHITE){
+            pieces[wQUEEN] |= (1ULL << toSquare);
+
+            hash ^= keys.zobristKeys[wQUEEN][toSquare];
+        } else {
+            pieces[bQUEEN] |= (1ULL << toSquare);
+
+            hash ^= keys.zobristKeys[bQUEEN][toSquare];
+        }
+    }
+
+    else if (moveType == CASTLING){
+        if (sideToMove == WHITE){
+            if (toSquare == G8){
+                pieces[wKING] ^= (1ULL << E8 | (1ULL << G8));
+                pieces[wROOK] ^= (1ULL << H8 | (1ULL << F8));
+
+                hash ^= keys.zobristKeys[wROOK][H8];
+                hash ^= keys.zobristKeys[wROOK][F8];
+            } else {
+                pieces[wKING] ^= (1ULL << E8 | (1ULL << C8));
+                pieces[wROOK] ^= (1ULL << A8 | (1ULL << D8));
+
+                hash ^= keys.zobristKeys[wROOK][A8];
+                hash ^= keys.zobristKeys[wROOK][D8];
+            }
+        } else {
+            if (toSquare == G1){
+                pieces[bKING] ^= (1ULL << E1 | (1ULL << G1));
+                pieces[bROOK] ^= (1ULL << H1 | (1ULL << F1));
+
+                hash ^= keys.zobristKeys[bROOK][H1];
+                hash ^= keys.zobristKeys[bROOK][F1];
+            } else {
+                pieces[bKING] ^= (1ULL << E1 | (1ULL << C1));
+                pieces[bROOK] ^= (1ULL << A1 | (1ULL << D1));
+
+                hash ^= keys.zobristKeys[bROOK][A1];
+                hash ^= keys.zobristKeys[bROOK][D1];
+            }
+        }
+    }
+
+    if(enPassantSquare){
+        // std::cout << "En Passant Square" << std::endl;
+        // std::cout << "Move Type: " << moveType << std::endl;
+        hash ^= keys.zobristEnPassant[std::countr_zero(enPassantSquare)];
+    }
+
+    enPassantSquare = 0;
+
+       // Update en passant square
+    if (moveType == DOUBLE_PAWN_PUSH){
+        if (piece == wPAWN){
+            enPassantSquare = (1ULL << (toSquare + 8));
+            hash ^= keys.zobristEnPassant[std::countr_zero(enPassantSquare)];
+        } else {
+            enPassantSquare = (1ULL << (toSquare - 8));
+            hash ^= keys.zobristEnPassant[std::countr_zero(enPassantSquare)];
+        }
+    } 
+
+    hash ^= keys.zobristCastling[castlingRights];
+
+        // Update castling rights
     if (piece == wKING){
         castlingRights &= ~(WHITE_FULL);
     } else if (piece == bKING){
@@ -218,16 +414,7 @@ void Position::makeMove(move currmove){
         }
     }
 
-    // Update en passant square
-    if (moveType == DOUBLE_PAWN_PUSH){
-        if (piece == wPAWN){
-            enPassantSquare = (1ULL << (toSquare + 8));
-        } else {
-            enPassantSquare = (1ULL << (toSquare - 8));
-        }
-    } else {
-        enPassantSquare = 0;
-    }
+    hash ^= keys.zobristCastling[castlingRights];
 
     // Update fifty move counter
     if (piece == wPAWN || piece == bPAWN || capturedPiece != NO_PIECE){
@@ -244,66 +431,20 @@ void Position::makeMove(move currmove){
     }
     
 
-    // Update position
-    if (moveType == QUIET || moveType == DOUBLE_PAWN_PUSH){
-        pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
-    }
-
-    else if (moveType == CAPTURE){
-        pieces[capturedPiece] &= ~(1ULL << toSquare);
-        pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
-    }
-
-    else if (moveType == EN_PASSANT){
-        pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));
-        if(sideToMove == WHITE){
-            pieces[bPAWN] &= ~(1ULL << (toSquare + 8));
-        } else {
-            pieces[wPAWN] &= ~(1ULL << (toSquare - 8));
-        }
-    }
-
-    else if (moveType == PROMOTON){
-        pieces[piece] &= ~(1ULL << fromSquare);
-        if (sideToMove == WHITE){
-            pieces[wQUEEN] |= (1ULL << toSquare);
-        } else {
-            pieces[bQUEEN] |= (1ULL << toSquare);
-        }
-    }
-
-    else if (moveType == PROMOTION_CAPTURE){
-        pieces[capturedPiece] &= ~(1ULL << toSquare);
-        pieces[piece] &= ~(1ULL << fromSquare);
-        if (sideToMove == WHITE){
-            pieces[wQUEEN] |= (1ULL << toSquare);
-        } else {
-            pieces[bQUEEN] |= (1ULL << toSquare);
-        }
-    }
-
-    else if (moveType == CASTLING){
-        if (sideToMove == WHITE){
-            if (toSquare == G8){
-                pieces[wKING] ^= (1ULL << E8 | (1ULL << G8));
-                pieces[wROOK] ^= (1ULL << H8 | (1ULL << F8));
-            } else {
-                pieces[wKING] ^= (1ULL << E8 | (1ULL << C8));
-                pieces[wROOK] ^= (1ULL << A8 | (1ULL << D8));
-            }
-        } else {
-            if (toSquare == G1){
-                pieces[bKING] ^= (1ULL << E1 | (1ULL << G1));
-                pieces[bROOK] ^= (1ULL << H1 | (1ULL << F1));
-            } else {
-                pieces[bKING] ^= (1ULL << E1 | (1ULL << C1));
-                pieces[bROOK] ^= (1ULL << A1 | (1ULL << D1));
-            }
-        }
-    }
-
     // Update side to move
     sideToMove = sideToMove == WHITE ? BLACK : WHITE;
+    hash ^= keys.zobristSideToMove;
+
+    if (hash != hashPosition()){
+        std::cout << "Hash: " << hash << std::endl;
+        std::cout << "Hash position: " << hashPosition() << std::endl;
+        std::cout << "Move: " << getFromSquare(currmove) << " " << getToSquare(currmove) << std::endl;
+        std::cout << "Move type: " << getMoveType(currmove) << std::endl;
+        std::cout << "Last move: " << getFromSquare(stateHistory[stateHistory.size() - 2].lastMove) << " " << getToSquare(stateHistory[stateHistory.size() - 2].lastMove) << std::endl;
+        std::cout << "Last move type: " << getMoveType(stateHistory[stateHistory.size() - 2].lastMove) << std::endl;
+        std::cin >> currmove;
+    }
+
 }
 
 void Position::undoMove(){
@@ -316,6 +457,8 @@ void Position::undoMove(){
     int toSquare = getToSquare(state.lastMove);
 
     halfMoveCounter--;
+
+    hash = state.hash;
 
     // Update castling rights
     castlingRights = state.castlingRights;

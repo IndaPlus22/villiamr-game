@@ -208,16 +208,16 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
     }
 
     // NULL MOVE PRUNING
-    if(!inCheck && depth >= reductionLimit && pos.getHalfMoveCounter()){ // Don't prune if in root or check
-        nullPruning = true; 
-        pos.toggleSideToMove();
-        pos.nullEnPassantSquare();
-        score = -minimax(pos,depth-3,-beta,-beta+1);
-        pos.toggleSideToMove();
-        nullPruning = false;
-        if(score >= beta)
-            return beta;
-    }
+    // if(!inCheck && depth >= reductionLimit && pos.getHalfMoveCounter()){ // Don't prune if in root or check
+    //     nullPruning = true; 
+    //     pos.toggleSideToMove();
+    //     pos.setEnpassantSquare(0);
+    //     score = -minimax(pos,depth-3,-beta,-beta+1);
+    //     pos.toggleSideToMove();
+    //     nullPruning = false;
+    //     if(score >= beta)
+    //         return beta;
+    // }
 
 
     // SORTING MOVES

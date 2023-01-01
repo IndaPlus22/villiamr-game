@@ -123,4 +123,11 @@ const std::map<std::string, Square> squareString{
     {"a8", A8}, {"b8", B8}, {"c8", C8}, {"d8", D8}, {"e8", E8}, {"f8", F8}, {"g8", G8}, {"h8", H8}
 };
 
+typedef struct zobristKeys {
+    Bitboard zobristKeys[12][64];
+    Bitboard zobristEnPassant[64];
+    Bitboard zobristCastling[16];
+    Bitboard zobristSideToMove;
+} ZobristKeys;
+
 #endif
