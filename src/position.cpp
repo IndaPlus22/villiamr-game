@@ -345,28 +345,28 @@ void Position::makeMove(move currmove){
     else if (moveType == CASTLING){
         if (sideToMove == WHITE){
             if (toSquare == G8){
-                pieces[wKING] ^= (1ULL << E8 | (1ULL << G8));
-                pieces[wROOK] ^= (1ULL << H8 | (1ULL << F8));
+                pieces[wKING] ^= ((1ULL << E8) | (1ULL << G8));
+                pieces[wROOK] ^= ((1ULL << H8) | (1ULL << F8));
 
                 hash ^= keys.zobristKeys[wROOK][H8];
                 hash ^= keys.zobristKeys[wROOK][F8];
             } else {
-                pieces[wKING] ^= (1ULL << E8 | (1ULL << C8));
-                pieces[wROOK] ^= (1ULL << A8 | (1ULL << D8));
+                pieces[wKING] ^= ((1ULL << E8) | (1ULL << C8));
+                pieces[wROOK] ^= ((1ULL << A8) | (1ULL << D8));
 
                 hash ^= keys.zobristKeys[wROOK][A8];
                 hash ^= keys.zobristKeys[wROOK][D8];
             }
         } else {
             if (toSquare == G1){
-                pieces[bKING] ^= (1ULL << E1 | (1ULL << G1));
-                pieces[bROOK] ^= (1ULL << H1 | (1ULL << F1));
+                pieces[bKING] ^= ((1ULL << E1) | (1ULL << G1));
+                pieces[bROOK] ^= ((1ULL << H1) | (1ULL << F1));
 
                 hash ^= keys.zobristKeys[bROOK][H1];
                 hash ^= keys.zobristKeys[bROOK][F1];
             } else {
-                pieces[bKING] ^= (1ULL << E1 | (1ULL << C1));
-                pieces[bROOK] ^= (1ULL << A1 | (1ULL << D1));
+                pieces[bKING] ^= ((1ULL << E1) | (1ULL << C1));
+                pieces[bROOK] ^= ((1ULL << A1) | (1ULL << D1));
 
                 hash ^= keys.zobristKeys[bROOK][A1];
                 hash ^= keys.zobristKeys[bROOK][D1];
@@ -375,8 +375,6 @@ void Position::makeMove(move currmove){
     }
 
     if(enPassantSquare){
-        // std::cout << "En Passant Square" << std::endl;
-        // std::cout << "Move Type: " << moveType << std::endl;
         hash ^= keys.zobristEnPassant[std::countr_zero(enPassantSquare)];
     }
 
@@ -435,13 +433,18 @@ void Position::makeMove(move currmove){
     sideToMove = sideToMove == WHITE ? BLACK : WHITE;
     hash ^= keys.zobristSideToMove;
 
-    if (hash != hashPosition()){
+    if(moveType == CASTLING){
+        hash = hashPosition();
+    }
+
+    if (hash != hashPosition()){ // TODO: Remove this but keep for a while
         std::cout << "Hash: " << hash << std::endl;
         std::cout << "Hash position: " << hashPosition() << std::endl;
         std::cout << "Move: " << getFromSquare(currmove) << " " << getToSquare(currmove) << std::endl;
         std::cout << "Move type: " << getMoveType(currmove) << std::endl;
         std::cout << "Last move: " << getFromSquare(stateHistory[stateHistory.size() - 2].lastMove) << " " << getToSquare(stateHistory[stateHistory.size() - 2].lastMove) << std::endl;
         std::cout << "Last move type: " << getMoveType(stateHistory[stateHistory.size() - 2].lastMove) << std::endl;
+        printBoard(pieces[wROOK]);
         std::cin >> currmove;
     }
 
@@ -521,19 +524,19 @@ void Position::undoMove(){
     else if (moveType == CASTLING){
         if (sideToMove == WHITE){
             if (toSquare == G8){
-                pieces[wKING] ^= (1ULL << E8 | (1ULL << G8));
-                pieces[wROOK] ^= (1ULL << H8 | (1ULL << F8));
+                pieces[wKING] ^= ((1ULL << E8) | (1ULL << G8));
+                pieces[wROOK] ^= ((1ULL << H8) | (1ULL << F8));
             } else {
-                pieces[wKING] ^= (1ULL << E8 | (1ULL << C8));
-                pieces[wROOK] ^= (1ULL << A8 | (1ULL << D8));
+                pieces[wKING] ^= ((1ULL << E8) | (1ULL << C8));
+                pieces[wROOK] ^= ((1ULL << A8) | (1ULL << D8));
             }
         } else {
             if (toSquare == G1){
-                pieces[bKING] ^= (1ULL << E1 | (1ULL << G1));
-                pieces[bROOK] ^= (1ULL << H1 | (1ULL << F1));
+                pieces[bKING] ^= ((1ULL << E1) | (1ULL << G1));
+                pieces[bROOK] ^= ((1ULL << H1) | (1ULL << F1));
             } else {
-                pieces[bKING] ^= (1ULL << E1 | (1ULL << C1));
-                pieces[bROOK] ^= (1ULL << A1 | (1ULL << D1));
+                pieces[bKING] ^= ((1ULL << E1) | (1ULL << C1));
+                pieces[bROOK] ^= ((1ULL << A1) | (1ULL << D1));
             }
         }
     }

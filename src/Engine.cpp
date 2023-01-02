@@ -2,7 +2,9 @@
 
 Engine::Engine(int depth){
     this->maxDepth = depth;
-    this->stop = false;
+    //this->stop = false;
+
+    transpositionTable.reserve(HASHSIZE);
 }
 
 void moveToString(move m)
@@ -127,11 +129,57 @@ void enablePVscoring(std::vector<move> movelist,Position pos){
 
 }
 
+// TRANSPOSITION TABLE
+
+void Engine::clearTT(){
+    for (int i = 0; i < HASHSIZE; i++){
+        transpositionTable[i].hash = 0ULL;
+        transpositionTable[i].depth = 0;
+        transpositionTable[i].flag = NONE;
+        transpositionTable[i].score = 0;
+    }
+}
+
+int Engine::ProbeTT(Bitboard hash, int depth, int alpha, int beta){
+    HashEntry *entry = &transpositionTable[hash % HASHSIZE];
+
+    if(entry->hash == hash){
+        if(entry->depth >= depth){
+            switch(entry->flag){
+                case EXACT:
+                    return entry->score;
+                case ALPHA:
+                    if(entry->score <= alpha)
+                        return alpha;
+                    break;
+                case BETA:
+                    if(entry->score >= beta)
+                        return beta;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    return unknownScore;
+}
+
+void Engine::StoreTT(Bitboard hash, int depth, int score, HashFlag flag){
+    HashEntry *entry = &transpositionTable[hash % HASHSIZE];
+
+    entry->hash = hash;
+    entry->depth = depth;
+    entry->score = score;
+    entry->flag = flag;
+}
+
 void Engine::findBestMove(Position pos){
     std::chrono::duration<double> executiontime;
     nodes = 0;
     followPV = false;
     scorePV = false;
+    clearTT();
     pos.resetHalfMove();
     memset(killerMoves,0,sizeof(killerMoves));
     memset(historyMoves,0,sizeof(historyMoves));
@@ -141,7 +189,7 @@ void Engine::findBestMove(Position pos){
     int alpha = -50000;
     int beta = 50000;
     
-    for (int dep = 1; dep <= maxDepth && !stop ;dep++){
+    for (int dep = 1; dep <= maxDepth;dep++){
         followPV = true;
         auto start = std::chrono::high_resolution_clock::now();
 
@@ -191,7 +239,15 @@ const int fullDepthMoves = 4;
 const int reductionLimit = 3;
 bool nullPruning = false;
 int Engine::minimax(Position pos,int depth, int alpha, int beta){
+    int hashval;
+    HashFlag flag = ALPHA;
+
+    if((hashval = ProbeTT(pos.getHash(),depth,alpha,beta)) != unknownScore){
+        return hashval;
+    }
+
     if( depth == 0 ) return quiesce(pos,alpha,beta);
+
 
     if(pos.getHalfMoveCounter() >= 63){ // Protect against going too deep in precence of perpetual check
         return evaluatePosition(pos);
@@ -264,10 +320,12 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
                 killerMoves[0][pos.getHalfMoveCounter()] = m;
             }
 
+            StoreTT(pos.getHash(),depth,beta,BETA);
             return beta;   //  fail hard beta-cutoff
         }
         if( score > alpha ){
             alpha = score; // alpha acts like max in MiniMax
+            flag = EXACT;
             
 
             // PRINCIPAL VARIATION TABLE
@@ -292,6 +350,7 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
     }if(pos.getStalemate()){
         return 0;
     }
+    StoreTT(pos.getHash(),depth,alpha,flag);
     return alpha;
 }
 

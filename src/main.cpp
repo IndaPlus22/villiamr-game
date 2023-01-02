@@ -173,7 +173,7 @@ void uciPosition(std::string input, Position &pos){
         pos.setFen(fen);
     }
 
-    std::cout << "Original Hash: " << pos.getHash() << std::endl;
+    //std::cout << "Original Hash: " << pos.getHash() << std::endl;
 
     // PARSE MOVES
     if (input.find("moves") != std::string::npos)
