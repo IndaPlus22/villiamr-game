@@ -71,7 +71,9 @@ public:
         Bitboard getOccupiedSquaresBitboard () const { return this->occupiedSquares; };
 
         Bitboard getEnpassantSquare () const { return this->enPassantSquare; };
-        void setEnpassantSquare (Bitboard enp) { this->enPassantSquare = enp; };
+        void setEnpassantSquare (Bitboard enp) { if(enPassantSquare) hash ^= keys.zobristEnPassant[std::countr_zero(enPassantSquare)];
+                                                this->enPassantSquare = enp; 
+                                                 if(enPassantSquare) hash ^= keys.zobristEnPassant[std::countr_zero(enPassantSquare)];};
         uint8_t getCastlingRights () const { return castlingRights; };
 
         Color getSideToMove () const { return sideToMove; };
@@ -86,7 +88,8 @@ public:
         void setCheckmate (bool checkmate) { this->checkmate = checkmate; };
         void setStalemate (bool stalemate) { this->stalemate = stalemate; };
         void resetHalfMove() {this->halfMoveCounter = 0;}
-        void toggleSideToMove() {this->sideToMove = (this->sideToMove == WHITE) ? BLACK : WHITE;};
+        void toggleSideToMove() {this->sideToMove = (this->sideToMove == WHITE) ? BLACK : WHITE;
+                                hash ^= keys.zobristSideToMove;};
 
         void updateAllPiecesBitboard();
 
