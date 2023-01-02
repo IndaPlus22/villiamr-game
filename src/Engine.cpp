@@ -1,10 +1,17 @@
 #include "Engine.hpp"
 
+
+#define mateScore 48000
+#define mateValue 49000
+
 Engine::Engine(int depth){
     this->maxDepth = depth;
     //this->stop = false;
 
+    // initialize transposition table
     transpositionTable.reserve(HASHSIZE);
+    clearTT();
+    hashedNodes = 0;
 }
 
 void moveToString(move m)
@@ -140,20 +147,25 @@ void Engine::clearTT(){
     }
 }
 
-int Engine::ProbeTT(Bitboard hash, int depth, int alpha, int beta){
+int Engine::ProbeTT(Bitboard hash, int depth, int alpha, int beta,int ply){
     HashEntry *entry = &transpositionTable[hash % HASHSIZE];
 
     if(entry->hash == hash){
         if(entry->depth >= depth){
+            int score = entry->score;
+
+            if(score < -mateScore) score += ply;
+            else if(score > mateScore) score -= ply;
+
             switch(entry->flag){
                 case EXACT:
-                    return entry->score;
+                    return score;
                 case ALPHA:
-                    if(entry->score <= alpha)
+                    if(score <= alpha)
                         return alpha;
                     break;
                 case BETA:
-                    if(entry->score >= beta)
+                    if(score >= beta)
                         return beta;
                     break;
                 default:
@@ -165,8 +177,11 @@ int Engine::ProbeTT(Bitboard hash, int depth, int alpha, int beta){
     return unknownScore;
 }
 
-void Engine::StoreTT(Bitboard hash, int depth, int score, HashFlag flag){
+void Engine::StoreTT(Bitboard hash, int depth, int score, HashFlag flag, int ply){
     HashEntry *entry = &transpositionTable[hash % HASHSIZE];
+
+    if(score < -mateScore) score -= ply;
+    else if(score > mateScore) score += ply;
 
     entry->hash = hash;
     entry->depth = depth;
@@ -176,11 +191,8 @@ void Engine::StoreTT(Bitboard hash, int depth, int score, HashFlag flag){
 
 void Engine::findBestMove(Position pos){
     std::chrono::duration<double> executiontime;
-    nodes = 0;
     followPV = false;
     scorePV = false;
-    clearTT();
-    pos.resetHalfMove();
     memset(killerMoves,0,sizeof(killerMoves));
     memset(historyMoves,0,sizeof(historyMoves));
     memset(pvTable,0,sizeof(pvTable));
@@ -190,7 +202,9 @@ void Engine::findBestMove(Position pos){
     int beta = 50000;
     
     for (int dep = 1; dep <= maxDepth;dep++){
+        nodes = 0;
         followPV = true;
+        pos.resetHalfMove();
         auto start = std::chrono::high_resolution_clock::now();
 
         int score = minimax(pos, dep, alpha, beta);
@@ -209,13 +223,19 @@ void Engine::findBestMove(Position pos){
         beta = score + 50;
         
            
-
+        int hashfull = (hashedNodes*1000 /HASHSIZE);
         std::cout << "info score cp " << score << " nodes " << nodes << 
                                                                             " depth " << dep << 
                                                                             " time " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << 
                                                                             " nps " << nodes / executiontime.count() << 
+                                                                            " hashfull " << hashfull <<
                                                                             " pv";
 
+        if(hashfull > 600) {
+            clearTT(); // Clear the TT if it is full
+            hashedNodes = 0;
+
+        }
             for (int i = 0; i < pvLength[0]; i++){
                 std::cout << " ";
                 moveToString(pvTable[0][i]);
@@ -237,12 +257,13 @@ void Engine::findBestMove(Position pos){
 */
 const int fullDepthMoves = 4;
 const int reductionLimit = 3;
-bool nullPruning = false;
 int Engine::minimax(Position pos,int depth, int alpha, int beta){
     int hashval;
     HashFlag flag = ALPHA;
 
-    if((hashval = ProbeTT(pos.getHash(),depth,alpha,beta)) != unknownScore){
+    bool pvMove = (beta - alpha) > 1;
+
+    if((hashval = ProbeTT(pos.getHash(),depth,alpha,beta,pos.getHalfMoveCounter())) != unknownScore && pos.getHalfMoveCounter() > 0 && !pvMove){
         return hashval;
     }
 
@@ -264,13 +285,13 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
     }
 
     // NULL MOVE PRUNING
-    if(!inCheck && depth >= reductionLimit && pos.getHalfMoveCounter()){ // Don't prune if in root or check
-        nullPruning = true; 
+    if(!inCheck && depth >= reductionLimit && pos.getHalfMoveCounter()){ // Don't prune if in root or check 
         pos.toggleSideToMove();
         pos.setEnpassantSquare(0);
+        pos.incrementHalfMove();
         score = -minimax(pos,depth-3,-beta,-beta+1);
+        pos.decrementHalfMove();
         pos.toggleSideToMove();
-        nullPruning = false;
         if(score >= beta)
             return beta;
     }
@@ -308,53 +329,60 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
                     score = -minimax(pos,depth-1,-beta,-alpha); // If all lmrs fail do a full search
                 }
             }
-        }
+        }if(pos.getHalfMoveCounter() >= 63){ // Protect against going too deep in precence of perpetual check
+        return evaluatePosition(pos);
+    }
         
         pos.undoMove();
         searchedMoves++;
 
-        if( score >= beta ){
-            //KILLER MOVE HEURISTIC
-            if(getMoveType(m) != CAPTURE && getMoveType(m) != PROMOTION_CAPTURE){
-                killerMoves[1][pos.getHalfMoveCounter()] = killerMoves[0][pos.getHalfMoveCounter()];
-                killerMoves[0][pos.getHalfMoveCounter()] = m;
-            }
-
-            StoreTT(pos.getHash(),depth,beta,BETA);
-            return beta;   //  fail hard beta-cutoff
-        }
         if( score > alpha ){
             alpha = score; // alpha acts like max in MiniMax
             flag = EXACT;
             
 
             // PRINCIPAL VARIATION TABLE
-            if(!nullPruning){ // Only allow pv moves if not in null move pruning
-                pvTable[pos.getHalfMoveCounter()][pos.getHalfMoveCounter()] = m;
-                // copy deeper moves to current ply
-                for (int p = pos.getHalfMoveCounter() + 1; p < pvLength[pos.getHalfMoveCounter() + 1]; p++){
-                    pvTable[pos.getHalfMoveCounter()][p] = pvTable[pos.getHalfMoveCounter() + 1][p];
-                }
-
-                pvLength[pos.getHalfMoveCounter()] = pvLength[pos.getHalfMoveCounter() + 1];
+        
+            pvTable[pos.getHalfMoveCounter()][pos.getHalfMoveCounter()] = m;
+            // copy deeper moves to current ply
+            for (int p = pos.getHalfMoveCounter() + 1; p < pvLength[pos.getHalfMoveCounter() + 1]; p++){
+                pvTable[pos.getHalfMoveCounter()][p] = pvTable[pos.getHalfMoveCounter() + 1][p];
             }
+            pvLength[pos.getHalfMoveCounter()] = pvLength[pos.getHalfMoveCounter() + 1];
+            
 
             // HISTORY HEURISTIC
             if(getMoveType(m) != CAPTURE && getMoveType(m) != PROMOTION_CAPTURE)
                 historyMoves[pos.getPieceType(getFromSquare(m))][getToSquare(m)] += depth;
-            
+
+            if( score >= beta ){
+                //KILLER MOVE HEURISTIC
+                if(getMoveType(m) != CAPTURE && getMoveType(m) != PROMOTION_CAPTURE){
+                    killerMoves[1][pos.getHalfMoveCounter()] = killerMoves[0][pos.getHalfMoveCounter()];
+                    killerMoves[0][pos.getHalfMoveCounter()] = m;
+                }
+
+                StoreTT(pos.getHash(),depth,beta,BETA,pos.getHalfMoveCounter());
+                hashedNodes++;
+                return beta;   //  fail hard beta-cutoff
+            }   
         }
     }
     if(pos.getCheckmate()){ // NEED TO ADD PLY?
-        return INT16_MIN + pos.getHalfMoveCounter();
+        return -mateValue + pos.getHalfMoveCounter();
     }if(pos.getStalemate()){
         return 0;
     }
-    StoreTT(pos.getHash(),depth,alpha,flag);
+    StoreTT(pos.getHash(),depth,alpha,flag,pos.getHalfMoveCounter());
+    hashedNodes++;
     return alpha;
 }
 
 int Engine::quiesce(Position pos, int alpha, int beta){
+    if(pos.getHalfMoveCounter() >= 63){ // Protect against going too deep in precence of perpetual check
+        return evaluatePosition(pos);
+    }
+
     int stand_pat = evaluatePosition(pos);
     if( stand_pat >= beta )
         return beta;

@@ -90,6 +90,8 @@ public:
         void resetHalfMove() {this->halfMoveCounter = 0;}
         void toggleSideToMove() {this->sideToMove = (this->sideToMove == WHITE) ? BLACK : WHITE;
                                 hash ^= keys.zobristSideToMove;};
+        void incrementHalfMove() {this->halfMoveCounter++;};
+        void decrementHalfMove() {this->halfMoveCounter--;};
 
         void updateAllPiecesBitboard();
 

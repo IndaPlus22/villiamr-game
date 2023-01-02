@@ -6,7 +6,7 @@
 #include "position.hpp"
 #include "movegen.hpp"
 
-#define HASHSIZE 0x500000 // TRANSPOSITION TABLE size 5.2MB
+#define HASHSIZE 0x400000 // TRANSPOSITION TABLE size 5.2MB
 #define unknownScore 1000000 // score for unknown positions
 
 // TRANSPOSITION TABLE flags
@@ -31,12 +31,13 @@ private:
 
     int maxDepth;
     Bitboard nodes;
+    Bitboard hashedNodes;
 
     int quiesce(Position pos,int alpha, int beta);
     int minimax(Position position ,int depth, int alpha, int beta);
 
-    int ProbeTT(Bitboard hash, int depth, int alpha, int beta);
-    void StoreTT(Bitboard hash, int depth, int score, HashFlag flag);
+    int ProbeTT(Bitboard hash, int depth, int alpha, int beta, int ply);
+    void StoreTT(Bitboard hash, int depth, int score, HashFlag flag,int ply);
 
 public:
     Engine() = default;

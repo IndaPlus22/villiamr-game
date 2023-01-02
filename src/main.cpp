@@ -7,6 +7,8 @@
 #include <thread>
 #include <fstream>
 
+
+//TODO : FIX ZOBRIST HASHING
 int engineDepth = 10;
 
 // Bitboard perft(int depth, Position &position){
