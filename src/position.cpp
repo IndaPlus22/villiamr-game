@@ -283,59 +283,45 @@ void Position::makeMove(move currmove){
     stateHistory.push_back(StateInfo{currmove, capturedPiece, hash, fiftyMoveCounter, repetitionCounter,enPassantSquare, castlingRights});
 
     pieces[piece] ^= (1ULL << fromSquare | (1ULL << toSquare));  
-    
-    hash ^= keys.zobristKeys[piece][fromSquare];
-    hash ^= keys.zobristKeys[piece][toSquare];
 
   
 
     if (moveType == CAPTURE){
         pieces[capturedPiece] &= ~(1ULL << toSquare);
 
-        hash ^= keys.zobristKeys[capturedPiece][toSquare];
     }
 
     else if (moveType == EN_PASSANT){
         if(sideToMove == WHITE){
             pieces[bPAWN] &= ~(1ULL << (toSquare + 8));
 
-            hash ^= keys.zobristKeys[bPAWN][toSquare + 8];
         } else {
             pieces[wPAWN] &= ~(1ULL << (toSquare - 8));
 
-            hash ^= keys.zobristKeys[wPAWN][toSquare - 8];
         }
     }
 
     else if (moveType == PROMOTON){
         pieces[piece] &= ~(1ULL << toSquare);
 
-        hash ^= keys.zobristKeys[piece][toSquare];
         if (sideToMove == WHITE){
             pieces[wQUEEN] |= (1ULL << toSquare);
 
-            hash ^= keys.zobristKeys[wQUEEN][toSquare];
         } else {
             pieces[bQUEEN] |= (1ULL << toSquare);
 
-            hash ^= keys.zobristKeys[bQUEEN][toSquare];
         }
     }
 
     else if (moveType == PROMOTION_CAPTURE){
         pieces[capturedPiece] &= ~(1ULL << toSquare);
         pieces[piece] &= ~(1ULL << toSquare);
-
-        hash ^= keys.zobristKeys[capturedPiece][toSquare];
-        hash ^= keys.zobristKeys[piece][toSquare];
         if (sideToMove == WHITE){
             pieces[wQUEEN] |= (1ULL << toSquare);
 
-            hash ^= keys.zobristKeys[wQUEEN][toSquare];
         } else {
             pieces[bQUEEN] |= (1ULL << toSquare);
 
-            hash ^= keys.zobristKeys[bQUEEN][toSquare];
         }
     }
 
@@ -344,31 +330,17 @@ void Position::makeMove(move currmove){
             if (toSquare == G8){
                 pieces[wROOK] ^= ((1ULL << H8) | (1ULL << F8));
 
-                hash ^= keys.zobristKeys[wROOK][H8];
-                hash ^= keys.zobristKeys[wROOK][F8];
             } else {
                 pieces[wROOK] ^= ((1ULL << A8) | (1ULL << D8));
 
-                hash ^= keys.zobristKeys[wROOK][A8];
-                hash ^= keys.zobristKeys[wROOK][D8];
             }
         } else {
             if (toSquare == G1){
                 pieces[bROOK] ^= ((1ULL << H1) | (1ULL << F1));
-
-                hash ^= keys.zobristKeys[bROOK][H1];
-                hash ^= keys.zobristKeys[bROOK][F1];
             } else {
                 pieces[bROOK] ^= ((1ULL << A1) | (1ULL << D1));
-
-                hash ^= keys.zobristKeys[bROOK][A1];
-                hash ^= keys.zobristKeys[bROOK][D1];
             }
         }
-    }
-
-    if(enPassantSquare){
-        hash ^= keys.zobristEnPassant[std::countr_zero(enPassantSquare)];
     }
 
     enPassantSquare = 0;
@@ -377,14 +349,10 @@ void Position::makeMove(move currmove){
     if (moveType == DOUBLE_PAWN_PUSH){
         if (piece == wPAWN){
             enPassantSquare = (1ULL << (toSquare + 8));
-            hash ^= keys.zobristEnPassant[std::countr_zero(enPassantSquare)];
         } else {
             enPassantSquare = (1ULL << (toSquare - 8));
-            hash ^= keys.zobristEnPassant[std::countr_zero(enPassantSquare)];
         }
     } 
-
-    hash ^= keys.zobristCastling[castlingRights];
 
         // Update castling rights
     if (piece == wKING){
@@ -405,7 +373,6 @@ void Position::makeMove(move currmove){
         }
     }
 
-    hash ^= keys.zobristCastling[castlingRights];
 
     // Update fifty move counter
     if (piece == wPAWN || piece == bPAWN || capturedPiece != NO_PIECE){
@@ -421,12 +388,12 @@ void Position::makeMove(move currmove){
         repetitionCounter = 0;
     }
     
+    if (repetitionCounter == 6){
+        stalemate = true;
+    }
 
     // Update side to move
     sideToMove = sideToMove == WHITE ? BLACK : WHITE;
-    hash ^= keys.zobristSideToMove;
-
-    hash = hashPosition();
 
     // if(moveType == CASTLING){
     //     hash = hashPosition();

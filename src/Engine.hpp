@@ -6,7 +6,7 @@
 #include "position.hpp"
 #include "movegen.hpp"
 
-#define HASHSIZE 0x400000 // TRANSPOSITION TABLE size 5.2MB
+#define HASHSIZE 0x400000 // TRANSPOSITION TABLE size 
 #define unknownScore 1000000 // score for unknown positions
 
 // TRANSPOSITION TABLE flags
@@ -27,7 +27,8 @@ typedef struct HASHENTRY{
 
 class Engine{
 private:
-    std::vector<HashEntry> transpositionTable;
+    int hashsize;
+    HashEntry *transpositionTable;
 
     int maxDepth;
     Bitboard nodes;
@@ -38,10 +39,12 @@ private:
 
     int ProbeTT(Bitboard hash, int depth, int alpha, int beta, int ply);
     void StoreTT(Bitboard hash, int depth, int score, HashFlag flag,int ply);
+    void reszieTT();
 
 public:
     Engine() = default;
     Engine(int depth);
+    ~Engine();
 
     void clearTT();
 

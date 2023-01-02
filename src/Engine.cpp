@@ -9,9 +9,14 @@ Engine::Engine(int depth){
     //this->stop = false;
 
     // initialize transposition table
-    transpositionTable.reserve(HASHSIZE);
+    hashsize = HASHSIZE;
+    transpositionTable = (HashEntry *)malloc(sizeof(HashEntry) * hashsize);
     clearTT();
     hashedNodes = 0;
+}
+
+Engine::~Engine(){
+    free(transpositionTable);
 }
 
 void moveToString(move m)
@@ -139,7 +144,7 @@ void enablePVscoring(std::vector<move> movelist,Position pos){
 // TRANSPOSITION TABLE
 
 void Engine::clearTT(){
-    for (int i = 0; i < HASHSIZE; i++){
+    for (int i = 0; i < hashsize; i++){
         transpositionTable[i].hash = 0ULL;
         transpositionTable[i].depth = 0;
         transpositionTable[i].flag = NONE;
@@ -147,8 +152,25 @@ void Engine::clearTT(){
     }
 }
 
+void Engine::reszieTT(){
+    HashEntry *oldTable = (HashEntry *)malloc(hashsize * sizeof(HashEntry));
+    memcpy(oldTable,transpositionTable,hashsize * sizeof(HashEntry));
+
+    hashsize += HASHSIZE;
+    transpositionTable = (HashEntry *)realloc(transpositionTable,hashsize * sizeof(HashEntry));
+
+    clearTT();
+
+    for (int i = 0; i < hashsize - HASHSIZE; i++){
+        if(oldTable[i].hash != 0ULL){
+            StoreTT(oldTable[i].hash,oldTable[i].depth,oldTable[i].score,oldTable[i].flag,0);
+        } 
+    }
+    free(oldTable);
+}
+
 int Engine::ProbeTT(Bitboard hash, int depth, int alpha, int beta,int ply){
-    HashEntry *entry = &transpositionTable[hash % HASHSIZE];
+    HashEntry *entry = &transpositionTable[hash % hashsize];
 
     if(entry->hash == hash){
         if(entry->depth >= depth){
@@ -178,7 +200,12 @@ int Engine::ProbeTT(Bitboard hash, int depth, int alpha, int beta,int ply){
 }
 
 void Engine::StoreTT(Bitboard hash, int depth, int score, HashFlag flag, int ply){
-    HashEntry *entry = &transpositionTable[hash % HASHSIZE];
+    HashEntry *entry = &transpositionTable[hash % hashsize];
+
+    if(entry->hash == hash){ // Replace entry if it is the same hash but deeper
+        if(entry->depth > depth)
+            return;
+    }
 
     if(score < -mateScore) score -= ply;
     else if(score > mateScore) score += ply;
@@ -223,28 +250,45 @@ void Engine::findBestMove(Position pos){
         beta = score + 50;
         
            
-        int hashfull = (hashedNodes*1000 /HASHSIZE);
-        std::cout << "info score cp " << score << " nodes " << nodes << 
+        int hashfull = (hashedNodes*1000 /hashsize);
+
+        if(score > -mateScore && score < -mateValue){
+            std::cout << "info score mate " << -(score + mateValue) / 2 - 1 << " nodes " << nodes << 
                                                                             " depth " << dep << 
                                                                             " time " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << 
                                                                             " nps " << nodes / executiontime.count() << 
                                                                             " hashfull " << hashfull <<
                                                                             " pv";
 
-        if(hashfull > 600) {
-            clearTT(); // Clear the TT if it is full
-            hashedNodes = 0;
-
+        }else if( score > mateScore && score < mateValue){
+            std::cout << "info score mate " << (mateValue - score) / 2 + 1 << " nodes " << nodes << 
+                                                                            " depth " << dep << 
+                                                                            " time " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << 
+                                                                            " nps " << nodes / executiontime.count() << 
+                                                                            " hashfull " << hashfull <<
+                                                                            " pv";
+        }else{
+            std::cout << "info score cp " << score << " nodes " << nodes << 
+                                                                            " depth " << dep << 
+                                                                            " time " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << 
+                                                                            " nps " << nodes / executiontime.count() << 
+                                                                            " hashfull " << hashfull <<
+                                                                            " pv";
         }
-            for (int i = 0; i < pvLength[0]; i++){
-                std::cout << " ";
-                moveToString(pvTable[0][i]);
-            }
-            
-            std::cout << std::endl;    
+
+        for (int i = 0; i < pvLength[0]; i++){
+            std::cout << " ";
+            moveToString(pvTable[0][i]);
+        }
+        
+        std::cout << std::endl;   
+
+        if(hashfull >= 900){
+            reszieTT();
+        }
     }
     std::cout << "bestmove ";
-    moveToString(pvTable[0][0]);
+    moveToString(pvTable[0][0]); 
     std::cout << std::endl;
     pos.makeMove(pvTable[0][0]);
     
@@ -255,27 +299,30 @@ void Engine::findBestMove(Position pos){
 /*  
     MINIMAX algorithm with alpha-beta pruning to find the best move
 */
+bool nullMove = false;
 const int fullDepthMoves = 4;
 const int reductionLimit = 3;
 int Engine::minimax(Position pos,int depth, int alpha, int beta){
-    int hashval;
+    int score;
     HashFlag flag = ALPHA;
-
-    bool pvMove = (beta - alpha) > 1;
-
-    if((hashval = ProbeTT(pos.getHash(),depth,alpha,beta,pos.getHalfMoveCounter())) != unknownScore && pos.getHalfMoveCounter() > 0 && !pvMove){
-        return hashval;
-    }
-
-    if( depth == 0 ) return quiesce(pos,alpha,beta);
-
 
     if(pos.getHalfMoveCounter() >= 63){ // Protect against going too deep in precence of perpetual check
         return evaluatePosition(pos);
     }
 
     pvLength[pos.getHalfMoveCounter()] = pos.getHalfMoveCounter();
-    int score;
+
+    bool pvMove = (beta - alpha) > 1;
+
+    if((score = ProbeTT(pos.hashPosition(),depth,alpha,beta,pos.getHalfMoveCounter())) != unknownScore && pos.getHalfMoveCounter() && !pvMove){
+        nodes++;
+        return score;
+    }
+
+    if( depth == 0 ) return quiesce(pos,alpha,beta);
+
+
+
 
 
     // INCREASE DEPTH IF IN CHECK
@@ -286,12 +333,14 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
 
     // NULL MOVE PRUNING
     if(!inCheck && depth >= reductionLimit && pos.getHalfMoveCounter()){ // Don't prune if in root or check 
+        nullMove = true;
         pos.toggleSideToMove();
         pos.setEnpassantSquare(0);
         pos.incrementHalfMove();
         score = -minimax(pos,depth-3,-beta,-beta+1);
         pos.decrementHalfMove();
         pos.toggleSideToMove();
+        nullMove = false;
         if(score >= beta)
             return beta;
     }
@@ -342,14 +391,14 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
             
 
             // PRINCIPAL VARIATION TABLE
-        
-            pvTable[pos.getHalfMoveCounter()][pos.getHalfMoveCounter()] = m;
-            // copy deeper moves to current ply
-            for (int p = pos.getHalfMoveCounter() + 1; p < pvLength[pos.getHalfMoveCounter() + 1]; p++){
-                pvTable[pos.getHalfMoveCounter()][p] = pvTable[pos.getHalfMoveCounter() + 1][p];
+            if( !nullMove ){ // Null move is not a pv move
+                pvTable[pos.getHalfMoveCounter()][pos.getHalfMoveCounter()] = m;
+                // copy deeper moves to current ply
+                for (int p = pos.getHalfMoveCounter() + 1; p < pvLength[pos.getHalfMoveCounter() + 1]; p++){
+                    pvTable[pos.getHalfMoveCounter()][p] = pvTable[pos.getHalfMoveCounter() + 1][p];
+                }
+                pvLength[pos.getHalfMoveCounter()] = pvLength[pos.getHalfMoveCounter() + 1];
             }
-            pvLength[pos.getHalfMoveCounter()] = pvLength[pos.getHalfMoveCounter() + 1];
-            
 
             // HISTORY HEURISTIC
             if(getMoveType(m) != CAPTURE && getMoveType(m) != PROMOTION_CAPTURE)
@@ -362,7 +411,7 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
                     killerMoves[0][pos.getHalfMoveCounter()] = m;
                 }
 
-                StoreTT(pos.getHash(),depth,beta,BETA,pos.getHalfMoveCounter());
+                StoreTT(pos.hashPosition(),depth,beta,BETA,pos.getHalfMoveCounter());
                 hashedNodes++;
                 return beta;   //  fail hard beta-cutoff
             }   
@@ -373,7 +422,7 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
     }if(pos.getStalemate()){
         return 0;
     }
-    StoreTT(pos.getHash(),depth,alpha,flag,pos.getHalfMoveCounter());
+    StoreTT(pos.hashPosition(),depth,alpha,flag,pos.getHalfMoveCounter());
     hashedNodes++;
     return alpha;
 }

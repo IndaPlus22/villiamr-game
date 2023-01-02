@@ -667,6 +667,9 @@ Bitboard getCheckers(Position pos, Color sideToMove){
 
 
 std::vector<move> generateLegalMoves(Position &pos){
+    if(pos.getStalemate() || pos.getCheckmate())
+        return {};
+
     pos.updateAllPiecesBitboard();
 
     Bitboard pins = getPinns(pos, pos.getSideToMove());
@@ -708,10 +711,6 @@ std::vector<move> generateLegalMoves(Position &pos){
             pos.setCheckmate(true);
         else
             pos.setStalemate(true);
-    }else if (pos.getRepetitionCounter() == 6){
-        pos.setStalemate(true);
-        pos.setCheckmate(false);
-        return {};
     }
     else{
         pos.setCheckmate(false);
