@@ -216,7 +216,7 @@ void Engine::StoreTT(Bitboard hash, int depth, int score, HashFlag flag, int ply
     entry->flag = flag;
 }
 
-void Engine::findBestMove(Position pos){
+void Engine::findBestMove(Position &pos){
     std::chrono::duration<double> executiontime;
     followPV = false;
     scorePV = false;
@@ -291,8 +291,6 @@ void Engine::findBestMove(Position pos){
     moveToString(pvTable[0][0]); 
     std::cout << std::endl;
     pos.makeMove(pvTable[0][0]);
-    
-    
 }
 
 
@@ -359,8 +357,7 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
         nodes++;
 
         // LATE MOVE REDUCTION (LMR)
-       
-        // Full depth
+        // Full depth search
         if(searchedMoves == 0)
             score = -minimax(pos,depth-1, -beta, -alpha);
         // LATE MOVE REDUCTION

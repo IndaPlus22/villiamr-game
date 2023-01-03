@@ -33,6 +33,7 @@ private:
     int maxDepth;
     Bitboard nodes;
     Bitboard hashedNodes;
+    move bestMove; // Used for graphics
 
     int quiesce(Position pos,int alpha, int beta);
     int minimax(Position position ,int depth, int alpha, int beta);
@@ -49,8 +50,9 @@ public:
     void clearTT();
 
 
-    void findBestMove(Position position);
+    void findBestMove(Position &position);
     Bitboard getNodes() const {return nodes;};
+    void setHashNodes(Bitboard hashedNodes) {this->hashedNodes = hashedNodes;};
 
     //void setStop(bool stop) {this->stop = stop;};
 

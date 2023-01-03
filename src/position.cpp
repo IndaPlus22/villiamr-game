@@ -388,7 +388,7 @@ void Position::makeMove(move currmove){
         repetitionCounter = 0;
     }
     
-    if (repetitionCounter == 6){
+    if (repetitionCounter == 6 || fiftyMoveCounter == 50){
         stalemate = true;
     }
 

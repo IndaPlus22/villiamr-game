@@ -8,7 +8,7 @@
 #include <fstream>
 
 
-int engineDepth = 9;
+int engineDepth = 10;
 
 // Bitboard perft(int depth, Position &position){
 //     Bitboard nodes = 0;
@@ -29,6 +29,7 @@ int engineDepth = 9;
 // }
 
 void uciLoop();
+void graphicsLoop();
 
 int main()
 {
@@ -37,74 +38,122 @@ int main()
     if (uci)
     {
         uciLoop();
+    }else{
+        graphicsLoop();
     }
 
-    // //std::cout << "\rPerft: " << perft(8, pos,graphics) << std::endl;
-    // graphics.drawBoard(pos, {});
-    // std::vector<int> highlightedSquares;
-    // std::vector<move> moves = generateLegalMoves(pos);
-    // bool running = true;
-    // bool engineTurn = false;
-    // while (running){
-    //     SDL_Event event;
-    //     while (SDL_PollEvent(&event)){
-    //         if (event.type == SDL_QUIT){
-    //             running = false;
-    //             break;
-    //         }
-    //         if(pos.getCheckmate() || pos.getGameIsOver()){
-    //             if(pos.getCheckmate()){
-    //                 std::cout << "Checkmate winner is: " << (pos.getSideToMove() == WHITE ? "BLACK" : "WHITE") << std::endl;
-    //             }
-    //             else{
-    //                 std::cout << "Stalemate" << std::endl;
-    //             }
-    //         }
-    //         // if(pos.getSideToMove() == engine.getPlayerColor() && !engineTurn){
-    //         //     threadFunction(pos, engine, graphics, engineTurn);
-    //         // }
-    //         if (event.type == SDL_MOUSEBUTTONDOWN){
-    //             moves = generateLegalMoves(pos);
-    //             int x,y;
-    //             SDL_GetMouseState(&x, &y);
-    //             highlightedSquares.push_back((x/100) + 8*(y/100));
-    //             if(highlightedSquares.size() == 1){
-    //                 for(move m : moves){
-    //                     if(getFromSquare(m) == highlightedSquares[0]){
-    //                         highlightedSquares.push_back(getToSquare(m));
-    //                         //graphics.drawBoard(pos, highlightedSquares);
-    //                     }
-    //                 }
-    //             }else {
-    //                 for(move m : moves){
-    //                     if(getFromSquare(m) == highlightedSquares[0] && getToSquare(m) == highlightedSquares.back()){
-    //                         pos.makeMove(m);
-    //                         moves = generateLegalMoves(pos);
-    //                     }
-    //                 }
-    //                 highlightedSquares.clear();
-    //                 //graphics.drawBoard(pos, {});
-    //             }
 
-    //         }
-    //         if(event.type == SDL_KEYDOWN){
-    //             if(event.key.keysym.sym == SDLK_u){
-    //                 pos.undoMove();
-    //                 moves = generateLegalMoves(pos);
-    //                 //graphics.drawBoard(pos, {});
-    //             }
-    //         }
-    //     }
-    //     graphics.drawBoard(pos, highlightedSquares);
-    // }
-
-    // graphics.close();
     return 0;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//**********************************************************************************************************************
+//****************************************************PROGRAM MAIN LOOPS************************************************
+//**********************************************************************************************************************
+
+
+void graphicsLoop(){
+    GraphicsBase graphics(800, 800);
+    Position pos = Position();
+    pos.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    Engine engine(engineDepth);
+    Engine engine2(engineDepth);
+
+    //std::cout << "\rPerft: " << perft(8, pos,graphics) << std::endl;
+    graphics.drawBoard(pos, {});
+    std::vector<int> highlightedSquares;
+    std::vector<move> moves = generateLegalMoves(pos);
+    bool running = true;
+    bool engineTurn = false;
+    while (running){
+        SDL_Event event;
+        while (SDL_PollEvent(&event)){
+            if (event.type == SDL_QUIT){
+                running = false;
+                break;
+            }
+            if (event.type == SDL_MOUSEBUTTONDOWN){
+                moves = generateLegalMoves(pos);
+                int x,y;
+                SDL_GetMouseState(&x, &y);
+                highlightedSquares.push_back((x/100) + 8*(y/100));
+                if(highlightedSquares.size() == 1){
+                    for(move m : moves){
+                        if(getFromSquare(m) == highlightedSquares[0]){
+                            highlightedSquares.push_back(getToSquare(m));
+                            graphics.drawBoard(pos, highlightedSquares);
+                        }
+                    }
+                }else {
+                    for(move m : moves){
+                        if(getFromSquare(m) == highlightedSquares[0] && getToSquare(m) == highlightedSquares.back()){
+                            pos.makeMove(m);
+                            moves = generateLegalMoves(pos);
+                            graphics.drawBoard(pos, {});
+                        }
+                    }
+                    highlightedSquares.clear();
+                    graphics.drawBoard(pos, {});
+                }
+
+            }
+            if(event.type == SDL_KEYDOWN){
+                if(event.key.keysym.sym == SDLK_u){
+                    pos.undoMove();
+                    moves = generateLegalMoves(pos);
+                    graphics.drawBoard(pos, {});
+                }
+            }
+        }
+        generateLegalMoves(pos);
+        if(pos.getCheckmate() || pos.getStalemate()){
+                pos.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+                graphics.drawBoard(pos, {});
+                engine.clearTT();
+                engine2.clearTT();
+            }
+        else if(pos.getSideToMove() == BLACK){
+                std::cout << "Engine #1" << std::endl;
+                engine.findBestMove(pos);
+                graphics.drawBoard(pos, {});
+        }
+        else if(pos.getSideToMove() == WHITE){
+                std::cout << "Engine #2" << std::endl;
+                engine2.findBestMove(pos);
+                graphics.drawBoard(pos, {});
+        }
+        graphics.drawBoard(pos, highlightedSquares);
+    }
+
+    graphics.close();
+}
+
+
+
+
 void uciPosition(std::string input, Position &pos);
-
-
 
 void uciLoop()
 {
