@@ -207,7 +207,7 @@ void Engine::StoreTT(Bitboard hash, int depth, int score, HashFlag flag, int ply
             return;
     }
 
-    if(score < -mateScore) score -= ply;
+    if(score < -mateScore) score -= ply; // Allows for mate scores to be stored
     else if(score > mateScore) score += ply;
 
     entry->hash = hash;
@@ -224,6 +224,9 @@ void Engine::findBestMove(Position &pos){
     memset(historyMoves,0,sizeof(historyMoves));
     memset(pvTable,0,sizeof(pvTable));
     memset(pvLength,0,sizeof(pvLength));
+
+    clearTT();
+    hashedNodes = 0;
 
     int alpha = -50000;
     int beta = 50000;
@@ -282,10 +285,6 @@ void Engine::findBestMove(Position &pos){
         }
         
         std::cout << std::endl;   
-
-        if(hashfull >= 900){
-            reszieTT();
-        }
     }
     std::cout << "bestmove ";
     moveToString(pvTable[0][0]); 
