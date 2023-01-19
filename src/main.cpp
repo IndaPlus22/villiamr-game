@@ -10,36 +10,39 @@
 
 int engineDepth = 10;
 
-// Bitboard perft(int depth, Position &position){
-//     Bitboard nodes = 0;
-
-//     if (depth == 0){
-//         return 1;
-//     }
-
-//     std::vector<move> moves = generateLegalMoves(position);
-//     for (move m : moves){
-//         position.makeMove(m);
-//         Bitboard n = perft(depth - 1, position);
-//         if(depth == 1) printmove(m);
-//         nodes += n;
-//         position.undoMove();
-//     }
-//     return nodes;
-// }
-
 void uciLoop();
-void graphicsLoop();
+void graphicsLoop(bool whiteEngine, bool blackEngine);
 
-int main()
-{
-    bool uci = true;
+int main(int argc, char *argv[]){
+    bool uci = false;
 
-    if (uci)
-    {
+    if (argc == 1){
         uciLoop();
     }else{
-        graphicsLoop();
+        // Input format
+            // ./chess <White> <Black> <Depth>
+
+        if(argc != 4){
+            std::cout << "Invalid input format" << std::endl;
+            std::cout << "\tInput format: ./chess <White> <Black> <Depth>" << std::endl;
+            std::cout << "\t\tWhite: human, engine" << std::endl;
+            std::cout << "\t\tBlack: human, engine" << std::endl;
+            std::cout << "\t\tRecomended depth: 1-10" << std::endl;
+            return 0;
+        }
+        bool whiteEngine = false;
+        std::string white = argv[1];
+        if (white == "engine"){
+            whiteEngine = true;
+        }
+        bool blackEngine = false;
+        std::string black = argv[2];
+        if (black == "engine"){
+            blackEngine = true;
+        }
+        engineDepth = std::stoi(argv[3]);
+        
+        graphicsLoop(whiteEngine, blackEngine);
     }
 
 
@@ -74,7 +77,7 @@ int main()
 //**********************************************************************************************************************
 
 
-void graphicsLoop(){
+void graphicsLoop(bool whiteEngine, bool blackEngine){
     GraphicsBase graphics(800, 800);
     Position pos = Position();
     pos.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -86,7 +89,8 @@ void graphicsLoop(){
     std::vector<int> highlightedSquares;
     std::vector<move> moves = generateLegalMoves(pos);
     bool running = true;
-    bool engineTurn = false;
+    bool engineTurn = true;
+    Color side = pos.getSideToMove();
     while (running){
         SDL_Event event;
         while (SDL_PollEvent(&event)){
@@ -94,7 +98,7 @@ void graphicsLoop(){
                 running = false;
                 break;
             }
-            if (event.type == SDL_MOUSEBUTTONDOWN){
+            if (event.type == SDL_MOUSEBUTTONDOWN && (pos.getSideToMove() == WHITE && whiteEngine == false) || (pos.getSideToMove() == BLACK && blackEngine == false)){
                 moves = generateLegalMoves(pos);
                 int x,y;
                 SDL_GetMouseState(&x, &y);
@@ -127,24 +131,34 @@ void graphicsLoop(){
                 }
             }
         }
+        if(side != pos.getSideToMove()){
+            engineTurn = true;
+            side = pos.getSideToMove();
+        }
+
         generateLegalMoves(pos);
         if(pos.getCheckmate() || pos.getStalemate()){
                 pos.setFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
                 graphics.drawBoard(pos, {});
                 engine.clearTT();
                 engine2.clearTT();
-            }
-        else if(pos.getSideToMove() == BLACK){
-                std::cout << "Engine #1" << std::endl;
-                engine.findBestMove(pos);
-                graphics.drawBoard(pos, {});
         }
-        else if(pos.getSideToMove() == WHITE){
-                std::cout << "Engine #2" << std::endl;
-                engine2.findBestMove(pos);
-                graphics.drawBoard(pos, {});
+        else if(pos.getSideToMove() == BLACK && blackEngine && engineTurn){
+                std::cout << "Engine Black" << std::endl;
+                //engine.findBestMove(pos);
+                std::thread t(&Engine::findBestMove, &engine, std::ref(pos));
+                t.detach();
+                engineTurn = false;
+        }
+        else if(pos.getSideToMove() == WHITE && whiteEngine && engineTurn){
+                std::cout << "Engine White" << std::endl;
+                //engine2.findBestMove(pos);
+                std::thread t(&Engine::findBestMove, &engine2, std::ref(pos));
+                t.detach();
+                engineTurn = false;
         }
         graphics.drawBoard(pos, highlightedSquares);
+        side = pos.getSideToMove();
     }
 
     graphics.close();
