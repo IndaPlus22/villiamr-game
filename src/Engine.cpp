@@ -202,8 +202,11 @@ int Engine::ProbeTT(Bitboard hash, int depth, int alpha, int beta,int ply){
 void Engine::StoreTT(Bitboard hash, int depth, int score, HashFlag flag, int ply){
     HashEntry *entry = &transpositionTable[hash % hashsize];
 
-    if(entry->hash == hash){ // Replace entry if it is the same hash but deeper
+    if(entry->hash != 0ULL){ // Store entry if it is empty
         hashedNodes--;
+    }
+
+    if(entry->hash == hash){ // Replace entry if it is the same hash but deeper
         if(entry->depth > depth){
             hashedNodes++;
             return;
