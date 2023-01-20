@@ -98,7 +98,7 @@ void graphicsLoop(bool whiteEngine, bool blackEngine){
                 running = false;
                 break;
             }
-            if (event.type == SDL_MOUSEBUTTONDOWN && (pos.getSideToMove() == WHITE && whiteEngine == false) || (pos.getSideToMove() == BLACK && blackEngine == false)){
+            if (event.type == SDL_MOUSEBUTTONDOWN && ((pos.getSideToMove() == WHITE && whiteEngine == false) || (pos.getSideToMove() == BLACK && blackEngine == false))){
                 moves = generateLegalMoves(pos);
                 int x,y;
                 SDL_GetMouseState(&x, &y);
@@ -158,7 +158,7 @@ void graphicsLoop(bool whiteEngine, bool blackEngine){
                 engineTurn = false;
         }
         graphics.drawBoard(pos, highlightedSquares);
-        side = pos.getSideToMove();
+        //side = pos.getSideToMove();
     }
 
     graphics.close();

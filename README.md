@@ -9,7 +9,11 @@ The engine runs via the UCI protocol so it is recomended to run thru any uci [gu
 
 ## Building and running
 
-Project is built using cmake and run via UCI gui (recomended [Cute chess](https://www.chessprogramming.org/Cute_Chess)).
+Project is built using cmake and run by defalut via UCI gui (recomended [Arena](http://www.playwitharena.de/)). To run via my own built chess gui program must be run with arguments:
+
+|White|Black|depth|
+|-----|-----|-----|
+|human/engine|human/engine|1-10|
 
 Script for building, in the `villiamr-game` folder run the following:
 
@@ -19,10 +23,12 @@ mkdir build/;cd build/; cmake -DCMAKE_BUILD_TYPE=Release ..;make all
 
 Exebutable is found in `villiamr-game/build/src`. 
 
-### Setting up gui
+### Setting up Arena gui
 
-In `tools > settings > engines` press te plus icon and for the `command` option browse to engine executable.
+First load the engine `Engines -> load new engine`
 
-Then you just press `game > new` and cpu with Chess as white or black player.
+To play against engine just play a move on the board an the loaded engine should start, to demo engine angainst iself press demo.
+
+
 
 
