@@ -229,8 +229,8 @@ void Engine::findBestMove(Position &pos){
     memset(pvTable,0,sizeof(pvTable));
     memset(pvLength,0,sizeof(pvLength));
 
-    clearTT();
-    hashedNodes = 0;
+    // clearTT();
+    // hashedNodes = 0;
 
     int alpha = -50000;
     int beta = 50000;
