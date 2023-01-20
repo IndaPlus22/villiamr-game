@@ -203,8 +203,11 @@ void Engine::StoreTT(Bitboard hash, int depth, int score, HashFlag flag, int ply
     HashEntry *entry = &transpositionTable[hash % hashsize];
 
     if(entry->hash == hash){ // Replace entry if it is the same hash but deeper
-        if(entry->depth > depth)
+        hashedNodes--;
+        if(entry->depth > depth){
+            hashedNodes++;
             return;
+        }
     }
 
     if(score < -mateScore) score -= ply; // Allows for mate scores to be stored
@@ -214,6 +217,7 @@ void Engine::StoreTT(Bitboard hash, int depth, int score, HashFlag flag, int ply
     entry->depth = depth;
     entry->score = score;
     entry->flag = flag;
+    hashedNodes++;
 }
 
 void Engine::findBestMove(Position &pos){
@@ -408,7 +412,6 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
                 }
 
                 StoreTT(pos.hashPosition(),depth,beta,BETA,pos.getHalfMoveCounter());
-                hashedNodes++;
                 return beta;   //  fail hard beta-cutoff
             }   
         }
@@ -419,7 +422,6 @@ int Engine::minimax(Position pos,int depth, int alpha, int beta){
         return 0;
     }
     StoreTT(pos.hashPosition(),depth,alpha,flag,pos.getHalfMoveCounter());
-    hashedNodes++;
     return alpha;
 }
 
